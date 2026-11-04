@@ -7,7 +7,7 @@ uv sync --locked
 uv run --locked syutyu --help
 ```
 
-## 公開APIは1つ
+## 公開API
 
 ```python
 from syutyu import (
