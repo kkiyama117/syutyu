@@ -7,7 +7,7 @@ uv run --locked tools/docs/api_reference.py --check
 ```
 
 - 対象は `syutyu` の公開クラスと関数。`cli.py` の内部、`syutyu.io.csvtable`、`_` で始まる名前は対象外。
-- `from syutyu import ...` で使える16名には「公開API」と記す。それ以外は submodule を明示して import する。
+- `from syutyu import ...` で使える18名には「公開API」と記す。それ以外は submodule を明示して import する。
 - 単位・計算方法・実行例は [利用ガイド](../guide/usage.md)、[解析方法](../guide/analysis-methods.md)。
 
 ## 一覧
@@ -25,6 +25,8 @@ uv run --locked tools/docs/api_reference.py --check
 | [`read_rdf`](#read_rdf) | 関数 | .gr 形式の RDF を読み、選んだブロックの平均を等重みで返す。 |
 | [`read_msd`](#read_msd) | 関数 | compute msd の fix ave/time 表を、系列名ごとに読む。 |
 | [`read_vacf`](#read_vacf) | 関数 | compute vacf の表を読み、Å²/ps² へ換算して返す。 |
+| [`Site`](#site) | クラス | 直方晶の単位胞にある1原子。 |
+| [`write_charge_data`](#write_charge_data) | 関数 | 分率座標の単位胞から LAMMPS の atom_style charge 用 data ファイルを書く。 |
 | [`rdf`](#rdf) | 関数 | 軌跡または LAMMPS の RDF 表から g(r) と積算配位数を返す。 |
 | [`msd`](#msd) | 関数 | 自前計算の原子 MSD か、LAMMPS compute msd の出力を選んで返す。 |
 | [`vacf`](#vacf) | 関数 | 自前計算の VACF か、LAMMPS compute vacf の出力を選んで返す。 |
@@ -390,6 +392,59 @@ compute vacf の表を読み、Å²/ps² へ換算して返す。
 **注意**
 
 単一原点の値であり、複数原点の平均ではない。速度の平均や重心ドリフトの除去はしない。
+
+## syutyu.io.lammps_data
+
+LAMMPS の atom_style charge 用 data ファイルを、分率座標から書く。
+
+### Site
+
+```python
+class Site
+```
+
+直方晶の単位胞にある1原子。
+
+公開API: `from syutyu import Site`
+
+**属性**
+
+- `type` — LAMMPS の原子タイプ。1 以上。
+- `charge` — 電荷。e。
+- `fractional` — 分率座標。各成分は [0, 1)。セル長を掛けると Å の座標になる。
+
+### write_charge_data
+
+```python
+write_charge_data(path, lengths, sites, masses, *, title='syutyu charge data', overwrite=False)
+```
+
+分率座標の単位胞から LAMMPS の atom_style charge 用 data ファイルを書く。
+
+公開API: `from syutyu import write_charge_data`
+
+**引数**
+
+- `path` — 書き出すファイル。親ディレクトリは存在すること。
+- `lengths` — 直方晶セルの (a, b, c)。Å。三つの有限な正の値。
+- `sites` — 空でない `Site` の列。原子 ID はこの順に 1 から振る。
+- `masses` — 原子タイプから質量（g/mol）への辞書。`sites` が使うタイプをすべて含み、使わないタイプを含まないこと。
+- `title` — 1行目の見出し。改行を含まない空でない1行。
+- `overwrite` — 既存ファイルを上書きすることを明示する。省略時は拒否する。
+
+**戻り値**
+
+書き出したファイルの `Path`。
+
+**例外**
+
+- `ValueError` — 長さ・原子タイプ・分率座標・電荷・質量・タイプの対応・`title` のいずれかが規則に合わない。
+- `FileExistsError` — `path` が存在し `overwrite` を指定していない。
+- `FileNotFoundError` — `path` の親ディレクトリがない。
+
+**注意**
+
+セルは原点 0 の直方晶で、角度は指定しない。電荷は e、長さは Å、質量は g/mol。
 
 ## syutyu.analysis.dispatch
 

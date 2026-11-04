@@ -12,6 +12,7 @@ uv run --locked syutyu --help
 ```python
 from syutyu import (
     Result, Trajectory, read_trajectory, read_thermo, save_result, load_result,
+    Site, write_charge_data,
     rdf, msd, vacf, fit_diffusion, summarize_thermo,
     run_lammps, save_figure, export_vmd,
 )
@@ -33,6 +34,17 @@ run = run_lammps('inputs/system.in', 'runs/my-system',
 uv run --locked syutyu run inputs/system.in --asset system.data \
   --output-root runs/my-system --ranks 1
 ```
+
+## LAMMPS data の書き出し
+
+```python
+write_charge_data(
+    'inputs/cscl.data', (4.115, 4.115, 4.115),
+    [Site(1, 1.0, (0.0, 0.0, 0.0)), Site(2, -1.0, (0.5, 0.5, 0.5))],
+    {1: 132.90543, 2: 35.4527}, title='CsCl unit cell')
+```
+
+電荷は素電荷 e、長さは Å、質量は g/mol。複製は LAMMPS の `replicate` で行う。
 
 ## 自前解析とnative出力
 

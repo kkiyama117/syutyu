@@ -45,6 +45,7 @@ SURFACE = (
     ('syutyu.io.dump', ('Trajectory', 'read_trajectory', 'frame_indices')),
     ('syutyu.io.thermo', ('read_thermo', 'read_thermo_blocks')),
     ('syutyu.io.native', ('read_rdf', 'read_msd', 'read_vacf')),
+    ('syutyu.io.lammps_data', ('Site', 'write_charge_data')),
     ('syutyu.analysis.dispatch', ('rdf', 'msd', 'vacf')),
     ('syutyu.analysis.diffusion', ('DiffusionFit', 'fit_diffusion')),
     ('syutyu.analysis.stats', ('summarize_thermo',)),
