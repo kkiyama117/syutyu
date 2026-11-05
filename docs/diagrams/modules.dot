@@ -1,0 +1,22 @@
+digraph modules {
+  graph [rankdir=TB, fontname="sans-serif", fontsize=12, nodesep=0.3, ranksep=0.5, pad=0.2];
+  node [shape=box, style="rounded,filled", fillcolor="#edf2fb", color="#7a8aa6", fontname="sans-serif", fontsize=10];
+  edge [color="#666670", fontname="sans-serif", fontsize=9];
+
+  cli [label="cli.py\nsyutyu コマンド\n（各モジュールを直接呼ぶ）"];
+  facade [label="syutyu/__init__.py\n公開 API の唯一の入口"];
+  dispatch [label="analysis/dispatch\nrdf・msd・vacf\n（custom か lammps を明示）"];
+  est [label="analysis/rdf・msd・vacf\n自前の推定"];
+  fit [label="analysis/diffusion・stats\n拡散のフィット・記述統計"];
+  kernels [label="kernels.py\n最小像・RDF・unwrap・MSD"];
+  io [label="io/\ndump・thermo・native 表\nlammps_data・store（schema3）"];
+  run [label="run.py\nLAMMPS の実行と run.json"];
+  report [label="report/\n図・VMD 用 ZIP"];
+
+  users [shape=plaintext, style="", label="Python から使う人"];
+  users -> facade;
+  facade -> dispatch; facade -> fit; facade -> io; facade -> run; facade -> report;
+  cli -> dispatch [style=dashed]; cli -> io [style=dashed]; cli -> run [style=dashed]; cli -> report [style=dashed];
+  dispatch -> est; dispatch -> io [label="lammps の出力"];
+  est -> kernels; est -> io [label="Trajectory・Result"];
+}
