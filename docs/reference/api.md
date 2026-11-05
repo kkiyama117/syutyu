@@ -3,7 +3,7 @@
 各項目の本文は docstring から Sphinx の autodoc と napoleon が生成する。docstring は Google スタイルで書く。このページには載せる名前と順番だけを書く。
 
 - 対象は `syutyu` の公開クラスと関数。`cli.py` の内部、`_` で始まる名前は対象外。
-- `syutyu.` の直下に書いた名前は `from syutyu import ...` で使える公開API（16名）。`syutyu.io.dump.frame_indices` のように submodule を含めて書いた名前は、その submodule から import する。
+- `syutyu.` の直下に書いた名前は `from syutyu import ...` で使える公開API（15名）。`syutyu.kernels.pair_rdf` のように submodule を含めて書いた名前は、その submodule から import する。
 - 単位・計算方法・実行例は [利用ガイド](../guide/usage.md)、[解析方法](../guide/analysis-methods.md)。
 
 ## 一覧
@@ -15,9 +15,7 @@
    syutyu.Result
    syutyu.save_result
    syutyu.load_result
-   syutyu.Trajectory
    syutyu.read_trajectory
-   syutyu.io.dump.frame_indices
    syutyu.read_thermo
    syutyu.read_thermo_blocks
    syutyu.io.native.read_rdf
@@ -63,12 +61,7 @@
 ```{eval-rst}
 .. automodule:: syutyu.io.dump
 
-.. autoclass:: syutyu.Trajectory
-   :members: select, fixed_box
-
 .. autofunction:: syutyu.read_trajectory
-
-.. autofunction:: syutyu.io.dump.frame_indices
 ```
 
 ## syutyu.io.thermo

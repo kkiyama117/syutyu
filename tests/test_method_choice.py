@@ -6,12 +6,12 @@ import unittest
 
 import numpy as np
 
-from syutyu import Trajectory, load_result, msd, rdf, save_result, vacf
+from syutyu import load_result, msd, rdf, save_result, vacf
 from syutyu.analysis.rdf import radial_distribution
 from syutyu.io.native import read_vacf
 from syutyu.kernels import pair_rdf
 from syutyu.report.figures import available_views, make_figure
-from support import run_cli, write_dump
+from support import frames_of, memory_universe, run_cli, write_dump
 
 
 def tiny_trajectory():
@@ -19,10 +19,8 @@ def tiny_trajectory():
                           [[3., 0, 0], [5., 0, 0]]])
     velocities = np.array([[[1., 0, 0], [2., 0, 0]], [[-1., 0, 0], [1., 0, 0]],
                            [[2., 0, 0], [-2., 0, 0]]])
-    return Trajectory(steps=np.array([0, 10, 20]), ids=np.array([1, 2]), positions=positions,
-                      boxes=np.full((3, 3), 10.), origins=np.zeros((3, 3)),
-                      labels={'type': np.array(['1', '1'])}, unwrapped=positions.copy(),
-                      unwrap_source='xu/yu/zu', velocities=velocities)
+    return memory_universe([0, 10, 20], positions, np.full((3, 3), 10.), ['1', '1'],
+                           velocities=velocities)
 
 
 class MethodChoiceTests(unittest.TestCase):
@@ -40,7 +38,8 @@ class MethodChoiceTests(unittest.TestCase):
         population = radial_distribution(t, [('all', 'all')], rmax=4, bins=4,
                                          normalization='population')
         np.testing.assert_allclose(expected, 2 * population.tables['rdf']['g_0'].to_numpy())
-        kernel = pair_rdf(t.positions, t.boxes[0], np.arange(5.), normalization='finite')[0]
+        _steps, positions, boxes, _velocities = frames_of(t)
+        kernel = pair_rdf(positions, boxes[0], np.arange(5.), normalization='finite')[0]
         np.testing.assert_allclose(kernel, expected)
         self.assertEqual(result.summary['rdf_normalization'], 'finite')
         self.assertEqual(result.summary['method'], 'custom')
@@ -48,7 +47,9 @@ class MethodChoiceTests(unittest.TestCase):
 
     def test_last_radial_edge_is_excluded_as_in_colab_and_lammps(self):
         t = tiny_trajectory()
-        kernel, cn, counts = pair_rdf(t.positions, t.boxes[0], np.array([0., 1., 2.]), normalization='finite')
+        _steps, positions, boxes, _velocities = frames_of(t)
+        kernel, cn, counts = pair_rdf(positions, boxes[0], np.array([0., 1., 2.]),
+                                      normalization='finite')
         np.testing.assert_array_equal(counts, [0, 0])  # all pair distances equal rmax=2
         result = rdf(t, method='custom', pairs=[('all', 'all')], rmax=2, bins=2)
         np.testing.assert_array_equal(result.tables['rdf']['g_0'].to_numpy(), kernel)
@@ -69,14 +70,14 @@ class MethodChoiceTests(unittest.TestCase):
 
     def test_custom_msd_single_and_multiple_origins_are_distinct(self):
         t = tiny_trajectory()
-        single = msd(t, method='custom', dt_ps=.1, origin_mode='single')
-        multiple = msd(t, method='custom', dt_ps=.1)
+        single = msd(t, method='custom', dt_ps=.1, origin_mode='single', coordinates='unwrapped')
+        multiple = msd(t, method='custom', dt_ps=.1, coordinates='unwrapped')
         np.testing.assert_allclose(single.tables['msd']['MSD_0_A2'].to_numpy(), [0, 1, 9])
         np.testing.assert_allclose(multiple.tables['msd']['MSD_0_A2'].to_numpy(), [0, 2.5, 9])
         self.assertEqual(single.summary['origin_mode'], 'single')
         self.assertEqual(multiple.summary['origin_mode'], 'multiple')
         with self.assertRaises(ValueError):
-            msd(t, method='custom', dt_ps=.1, origin_step=0)
+            msd(t, method='custom', dt_ps=.1, origin_step=0, coordinates='unwrapped')
 
     def test_native_msd_requires_origin_and_rejects_multiple(self):
         path = self.root / 'native.msd'

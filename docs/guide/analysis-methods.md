@@ -15,7 +15,7 @@ custom_rdf = rdf('trajectory.lammpstrj', method='custom',
                  pairs=[('all','all')], rmax=12, bins=240, normalization='finite')
 native_rdf = rdf('Ar_nvt.gr', method='lammps', pairs=[('Ar','Ar')])
 custom_msd = msd('trajectory.lammpstrj', method='custom', dt_ps=.001,
-                 start_step=1000, origin_mode='multiple')
+                 coordinates='wrapped', start_step=1000, origin_mode='multiple')
 native_msd = msd('Ar_nvt.msd', method='lammps', dt_ps=.001, origin_step=0)
 custom_vacf = vacf('trajectory.lammpstrj', method='custom', dt_ps=.001,
                    velocity_unit='A/fs', origin_mode='multiple', max_lag_ps=1)

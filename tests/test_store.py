@@ -6,17 +6,15 @@ import unittest
 import numpy as np
 import polars as pl
 
-from syutyu import Result, Trajectory, load_result, msd, save_result
+from syutyu import Result, load_result, msd, save_result
 from syutyu.io.native import read_msd
+from support import memory_universe
 
 
 def sliding_trajectory():
     positions = np.array([[[0., 0, 0], [5., 0, 0]], [[1., 0, 0], [5., 0, 0]],
                           [[2., 0, 0], [5., 0, 0]]])
-    return Trajectory(steps=np.array([0, 10, 20]), ids=np.array([1, 2]), positions=positions,
-                      boxes=np.full((3, 3), 10.), origins=np.zeros((3, 3)),
-                      labels={'type': np.array(['1', '2'])}, unwrapped=positions.copy(),
-                      unwrap_source='xu/yu/zu')
+    return memory_universe([0, 10, 20], positions, np.full((3, 3), 10.), ['1', '2'])
 
 
 class ResultStoreTest(unittest.TestCase):
@@ -35,14 +33,14 @@ class ResultStoreTest(unittest.TestCase):
         self.assertEqual(table['MSD_0_A2'].to_list(), [1.2, 2.4])
 
     def test_integer_columns_are_int64(self):
-        result = msd(sliding_trajectory(), method='custom', dt_ps=.001)
+        result = msd(sliding_trajectory(), method='custom', dt_ps=.001, coordinates='unwrapped')
         table = result.tables['msd']
         self.assertEqual(table.schema['origin_atom_pairs_0'], pl.Int64)
         self.assertEqual(table.schema['lag_ps'], pl.Float64)
         self.assertEqual(table.schema['MSD_0_A2'], pl.Float64)
 
     def test_roundtrip_is_exact(self):
-        result = msd(sliding_trajectory(), method='custom', dt_ps=.001)
+        result = msd(sliding_trajectory(), method='custom', dt_ps=.001, coordinates='unwrapped')
         output = save_result(result, self.root / 'msd-result')
         loaded = load_result(output)
         self.assertTrue(loaded.tables['msd'].equals(result.tables['msd']))

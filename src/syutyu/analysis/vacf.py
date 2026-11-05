@@ -2,7 +2,7 @@
 """
 import numpy as np
 
-from ..io.dump import frame_indices
+from ..io.dump import _frames, _select, _source_dump, _steps, _velocities
 from ..io.store import Result, _frame
 
 
@@ -31,8 +31,8 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
     """選択ごとに速度自己相関を計算する。複数時間原点が Colab の定義。
 
     Args:
-        trajectory (Trajectory): 速度を含む ``Trajectory``。
-        selections (Sequence[str]): 選択式の並び。各選択が1つの系列になる。
+        trajectory (MDAnalysis.Universe): 速度を含む軌跡。
+        selections (Sequence[str]): MDAnalysis 選択式の並び。各選択が1つの系列になる。
         dt_ps (float): LAMMPS の 1 step 当たりの ps。dump の間隔ではない。
         velocity_unit (str): ``A/fs`` か ``A/ps``。``A/fs`` は二乗する前に換算する。
         start_step (int | None): 使うフレームの範囲と間引き。等間隔であること。
@@ -44,7 +44,7 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
         Result: ``tables['vacf']`` に ``lag_ps``、成分 ``VACF_<i>_x_A2_ps2`` など、``VACF_<i>_A2_ps2``、``VACF_<i>_normalized``、``origin_atom_pairs_<i>``。
 
     Raises:
-        ValueError: ``dt_ps`` や単位・原点モードが不正、選択が空、フレームが2未満か等間隔でない、速度がないか非有限、lag 上限が範囲外、Cv(0) が0。
+        ValueError: ``dt_ps`` や単位・原点モードが不正、選択が空、フレームが2未満か等間隔でない、速度がないか非有限、lag 上限が範囲外、Cv(0) が0、選択式が不正か、一致する原子がない。
 
     Note:
         速度は保存されたまま使い、平均も重心ドリフトも引かない。拡散係数・粘性・スペクトルの推定はしない。
@@ -57,13 +57,13 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
         raise ValueError("origin_mode must be 'multiple' (Colab) or 'single' (frame 0 only)")
     if not selections:
         raise ValueError('Specify at least one atom selection')
-    frames = frame_indices(trajectory, start_step=start_step, stride=stride)
-    steps = trajectory.steps[frames]
+    frames = _frames(trajectory, start_step=start_step, stride=stride)
+    steps = _steps(trajectory)[frames]
     if len(frames) < 2 or not np.all(np.diff(steps) == steps[1] - steps[0]):
         raise ValueError('VACF needs at least two uniformly spaced selected frames')
-    if trajectory.velocities is None:
+    velocities = _velocities(trajectory, frames)
+    if velocities is None:
         raise ValueError('VACF requires dump velocities (vx/vy/vz)')
-    velocities = np.asarray(trajectory.velocities, dtype=float)[frames]
     if not np.isfinite(velocities).all():
         raise ValueError('Non-finite velocities')
     if velocity_unit == 'A/fs':
@@ -84,7 +84,7 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
     table = {'lag_ps': lag_ps}
     info = []
     for index, expression in enumerate(selections):
-        mask = trajectory.select(expression)
+        mask = _select(trajectory, expression)
         correlations, counts = _correlations(velocities[:, mask], lags, origin_mode)
         total = correlations.sum(axis=1)
         if not total[0] > 0:
@@ -109,7 +109,7 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
         'kind': 'vacf', 'title': 'Velocity autocorrelation function', 'method': 'custom',
         'origin_mode': origin_mode, 'velocity_unit_input': velocity_unit,
         'velocity_unit_output': 'A/ps', 'dt_ps': dt_ps, 'frame_interval_ps': frame_interval_ps,
-        'source_dump': trajectory.source_path,
+        'source_dump': _source_dump(trajectory),
         'selected_steps': [int(steps[0]), int(steps[-1])], 'selected_frames': len(frames),
         'frame_stride': stride, 'mean_velocity_rms_A_ps': mean_velocity_rms,
         'drift_removed': False, 'vacf_selections': info, 'limitations': limitations,

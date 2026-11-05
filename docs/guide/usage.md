@@ -11,7 +11,7 @@ uv run --locked syutyu --help
 
 ```python
 from syutyu import (
-    Result, Trajectory, read_trajectory, read_thermo, read_thermo_blocks, save_result, load_result,
+    Result, read_trajectory, read_thermo, read_thermo_blocks, save_result, load_result,
     rdf, msd, vacf, fit_diffusion, DiffusionFit, summarize_thermo,
     run_lammps, save_figure, export_vmd,
 )
@@ -56,29 +56,31 @@ write('inputs/cscl.data', cell, format='lammps-data', atom_style='charge',
 
 ```python
 trajectory = read_trajectory('trajectory.lammpstrj')
-result = rdf(trajectory, method='custom', pairs=[('type:1', 'type:2')],
+result = rdf(trajectory, method='custom', pairs=[('type 1', 'type 2')],
              rmax=10, bins=200, normalization='finite')
 save_result(result, 'results/my-rdf')
 save_figure(load_result('results/my-rdf'), 'results/my-rdf.png')
 ```
 
-選択は`all`、`element:Ar`、`type:3`、`mol:12`。dumpにあるラベルだけを使い、元素から原子タイプや力場部位を推測しない。分子内除外は`intermolecular=True`で、非ゼロの同一mol IDを除く。mol=0同士は同一分子と扱わない。
+`read_trajectory`はMDAnalysisの`Universe`を返し、座標と速度はfloat32である。
+
+選択はMDAnalysisの選択文字列で、`all`、`element Ar`、`type 3`、`resid 12`など。`mol`列は`resid`になり、resid 0は分子を表さない。`mol`列のないdumpは分子内除外で何も除かず、`type`か`element`列のないdumpではそのキーワードが何にも一致しない。`type`列のないdumpに`com_masses`を与えると`com_masses needs a type column in the dump`で止まる。dumpにある列だけを使い、元素から原子タイプや力場部位を推測しない。分子内除外は`intermolecular=True`で、同じで非ゼロのresidを持つ原子対を除く。
 
 RDFは各フレームの体積で規格化する。既定のfiniteは分母`N_A*N_B-N_overlap`、populationは`N_A*N_B`。後者の同種理想気体の有限N極限は1−1/Nである。CNは中心原子1個当たりの直接カウントであり、可変体積では平均gに平均密度を掛け直さない。rmaxは対象全フレームの最短辺の半分以下。結合近傍を除くLAMMPSのspecial_bonds処理までは再現しない。
 
 ```bash
 uv run --locked syutyu rdf trajectory.lammpstrj --method custom \
-  --pair type:1 type:2 --rmax 10 --bins 200 --normalization finite --output results/rdf
+  --pair 'type 1' 'type 2' --rmax 10 --bins 200 --normalization finite --output results/rdf
 uv run --locked syutyu rdf native.gr --method lammps --output results/native-rdf
 uv run --locked syutyu msd trajectory.lammpstrj --method custom \
-  --select all --dt-ps .001 --origins multiple --output results/msd
+  --select all --coordinates wrapped --dt-ps .001 --origins multiple --output results/msd
 uv run --locked syutyu vacf trajectory.lammpstrj --method custom \
   --dt-ps .001 --velocity-unit A/fs --max-lag-ps 1 --output results/vacf
 ```
 
-`dt_ps`は1 LAMMPS step当たりのpsであり、dump間隔ではない。原子ID、セル、座標形式、速度の単位を明記する。直交・3方向周期セルのみを扱い、反応でIDやtypeが変わる系、傾斜セル等は受け付けない。距離はÅ、MSDはÅ²を前提とし、units ljの換算は行わない。
+`dt_ps`は1 LAMMPS step当たりのpsであり、dump間隔ではない。原子ID、セル、座標形式、速度の単位を明記する。直交・3方向周期セルのみを扱い、傾斜セル等は受け付けない。ID と type は最初のフレームのものを使い、途中の変化は検出しない。距離はÅ、MSDはÅ²を前提とし、units ljの換算は行わない。
 
-MSDはxu/yu/zu・image flagsを優先する。固定セルのwrapped座標だけなら、真の隣接フレーム変位の各成分がL/2未満という仮定でunwrapする。可変セルには明示unwrapped情報とlaboratory=Trueが必要で、その値はセル伸縮を含む実験室座標のMSDである。分子重心MSDは計算しない。系全体の重心ドリフトは、APIで `com_masses` を与えたときだけ引く（CLIにはない）。
+MSDの`coordinates`は、座標がすでに非折り返しかを宣言する。`read_trajectory`は、dumpに`xu/yu/zu`があれば、または`x/y/z`とimage flagsがあれば非折り返し座標を返し、`xs/ys/zs`はimage flagsがあっても折り返したまま返す。`wrapped`は、隣接フレーム間の真の変位の各成分がL/2未満という仮定でunwrapする。可変セルには`coordinates='unwrapped'`と`laboratory=True`が必要で、その値はセル伸縮を含む実験室座標のMSDである。分子重心MSDは計算しない。系全体の重心ドリフトは、APIで `com_masses` を与えたときだけ引く（CLIにはない）。
 
 ## native表の段階的な読込
 

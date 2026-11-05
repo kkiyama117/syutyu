@@ -6,7 +6,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 from syutyu import read_trajectory
 from syutyu.kernels import minimum_image, pair_rdf, unwrap, msd_multi_origin
-from support import write_dump
+from support import frames_of, write_dump
 
 
 class AnalysisTests(unittest.TestCase):
@@ -72,10 +72,10 @@ class AnalysisTests(unittest.TestCase):
                               [['2 Ar 9 0 0', '1 Ar 1 0 0'], ['1 Ar 2 0 0', '2 Ar 8 0 0']],
                               steps=[0, 100])
             trajectory = read_trajectory(path)
-            steps, xyz, box = trajectory.steps, trajectory.positions, trajectory.boxes[0]
+            steps, xyz, boxes, _velocities = frames_of(trajectory)
             np.testing.assert_array_equal(steps, [0, 100])
             np.testing.assert_array_equal(xyz[:, :, 0], [[1, 9], [2, 8]])
-            np.testing.assert_array_equal(box, [10, 10, 10])
+            np.testing.assert_array_equal(boxes[0], [10, 10, 10])
 
 
 if __name__ == '__main__':

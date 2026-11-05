@@ -21,21 +21,26 @@ def make_parser():
         cmd.add_argument('--method', choices=('custom', 'lammps'), default='custom')
         cmd.add_argument('--output', type=Path, required=True)
         cmd.add_argument('--start-step', type=int)
-        cmd.add_argument('--stride', type=int, default=1, help='Use every Nth frame (MSD unwraps before thinning)')
+        cmd.add_argument('--stride', type=int, default=1, help='Use every Nth frame (wrapped MSD unwraps before thinning)')
         cmd.add_argument('--overwrite', action='store_true')
         if name == 'rdf':
-            cmd.add_argument('--pair', nargs=2, action='append', metavar=('CENTER', 'NEIGHBOR'))
+            cmd.add_argument('--pair', nargs=2, action='append', metavar=('CENTER', 'NEIGHBOR'),
+                             help='custom: MDAnalysis selections for center and neighbor; lammps: display labels')
             cmd.add_argument('--rmax', type=float, help='Custom only: Å, at most half the shortest box length')
             cmd.add_argument('--bins', type=int, help='Custom only; default 200')
             cmd.add_argument('--normalization', choices=('finite', 'population'), default='finite')
-            cmd.add_argument('--intermolecular', action='store_true', help='Custom only: exclude same nonzero mol ID')
+            cmd.add_argument('--intermolecular', action='store_true',
+                             help='Custom only: exclude pairs with the same nonzero resid')
         else:
-            cmd.add_argument('--select', action='append', help='all, type:3, element:Na or mol:12; repeatable')
+            cmd.add_argument('--select', action='append',
+                             help='MDAnalysis selection, e.g. all, type 3, element Na, resid 12; repeatable')
             cmd.add_argument('--dt-ps', type=float, required=True, help='ps per LAMMPS timestep, NOT dump interval')
             cmd.add_argument('--origins', choices=('multiple', 'single'), help='Custom default multiple; LAMMPS is single only')
             cmd.add_argument('--origin-step', type=int, help='Required for native files: when the compute reference was created')
             if name == 'msd':
                 cmd.add_argument('--laboratory', action='store_true', help='Custom NPT with explicit unwrapped coordinates; includes box motion')
+                cmd.add_argument('--coordinates', choices=('unwrapped', 'wrapped'),
+                                 help='Custom MSD, required: unwrapped if positions are already unwrapped, else wrapped')
             else:
                 cmd.add_argument('--velocity-unit', choices=('A/fs', 'A/ps'), required=True)
                 cmd.add_argument('--max-lag-ps', type=float)
@@ -97,6 +102,10 @@ def main(argv=None):
                 if args.select is not None or custom:
                     options['selections'] = args.select or ['all']
                 if args.command == 'msd':
+                    if custom and args.coordinates is None:
+                        raise ValueError('Custom MSD requires --coordinates unwrapped or wrapped')
+                    if args.coordinates is not None:
+                        options['coordinates'] = args.coordinates
                     if args.laboratory or custom:
                         options['laboratory'] = args.laboratory
                     result = msd(args.trajectory, method=args.method, dt_ps=args.dt_ps,

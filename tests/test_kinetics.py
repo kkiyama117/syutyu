@@ -1,14 +1,13 @@
 """VACF unit tests: Colab multiple-origin definition, units, parsing and rejections."""
-from dataclasses import replace
 from pathlib import Path
 import tempfile
 import unittest
 
 import numpy as np
 
-from syutyu import Trajectory, read_trajectory
+from syutyu import read_trajectory
 from syutyu.analysis.vacf import velocity_autocorrelation
-from support import write_dump
+from support import frames_of, memory_universe, write_dump
 
 
 def velocity_dump(path, velocities, steps=None, types=None):
@@ -82,8 +81,8 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             multiple = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps')
             single = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
                                               origin_mode='single')
-            expected_multiple = explicit_vacf(t.velocities, 'multiple')
-            expected_single = explicit_vacf(t.velocities, 'single')
+            expected_multiple = explicit_vacf(frames_of(t)[3], 'multiple')
+            expected_single = explicit_vacf(frames_of(t)[3], 'single')
             table = multiple.tables['vacf']
             for axis, name in enumerate(('x', 'y', 'z')):
                 np.testing.assert_allclose(table[f'VACF_0_{name}_A2_ps2'].to_numpy(),
@@ -120,7 +119,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                 [[.5, 1, -1], [-1, -1, .5]],
                 [[-2, 0, 2], [2, 2, -3]],
             ])
-            expected = explicit_vacf(general.velocities, 'multiple')
+            expected = explicit_vacf(frames_of(general)[3], 'multiple')
             result = velocity_autocorrelation(general, ['all'], dt_ps=.001,
                                               velocity_unit='A/ps').tables['vacf']
             for axis, name in enumerate(('x', 'y', 'z')):
@@ -132,7 +131,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                 + result['VACF_0_z_A2_ps2'].to_numpy())
             np.testing.assert_allclose(result['VACF_0_normalized'].to_numpy()[0], 1)
             np.testing.assert_allclose(result['VACF_0_A2_ps2'].to_numpy()[0],
-                                       np.mean(np.sum(general.velocities**2, axis=-1)))
+                                       np.mean(np.sum(frames_of(general)[3]**2, axis=-1)))
 
     def test_constant_velocity_keeps_normalized_one(self):
         velocities = [[[1, 0, 0], [0, 1, 0]]] * 4
@@ -166,10 +165,11 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             t = read_trajectory(write_dump(path, 'id type x y z vx vy vz',
                                            [['2 2 0 0 0 4 5 6', '1 1 0 0 0 1 2 3'],
                                             ['1 1 0 0 0 -1 -2 -3', '2 2 0 0 0 0 1 2']]))
-            np.testing.assert_array_equal(t.ids, [1, 2])
-            np.testing.assert_allclose(t.velocities[0], [[1, 2, 3], [4, 5, 6]])
-            np.testing.assert_allclose(t.velocities[1], [[-1, -2, -3], [0, 1, 2]])
-            sorted_t = velocity_dump(sorted_path, t.velocities)
+            velocities = frames_of(t)[3]
+            np.testing.assert_array_equal(t.atoms.ids, [1, 2])
+            np.testing.assert_allclose(velocities[0], [[1, 2, 3], [4, 5, 6]])
+            np.testing.assert_allclose(velocities[1], [[-1, -2, -3], [0, 1, 2]])
+            sorted_t = velocity_dump(sorted_path, velocities)
             reordered = velocity_autocorrelation(t, ['all'], dt_ps=.001,
                                                  velocity_unit='A/ps').tables['vacf']
             ordered = velocity_autocorrelation(sorted_t, ['all'], dt_ps=.001,
@@ -182,8 +182,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             tmp = Path(tmp)
             old = read_trajectory(write_dump(tmp / 'old', 'id type x y z',
                                              [['1 1 0 0 0'], ['1 1 1 0 0']]))
-            self.assertIsNone(old.velocities)
-            self.assertTrue(old.select('type:1').all())
+            self.assertFalse(old.trajectory.ts.has_velocities)
             with self.assertRaisesRegex(ValueError, 'velocities'):
                 velocity_autocorrelation(old, ['all'], dt_ps=.001, velocity_unit='A/ps')
             with self.assertRaisesRegex(ValueError, 'vx/vy/vz'):
@@ -200,12 +199,10 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                                            [['1 1 0 0 0 1 0 0'], ['1 1 1 0 0 inf 0 0']]))
 
     def test_nonfinite_velocity_on_manual_trajectory_rejected(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            t = velocity_dump(Path(tmp) / 'dump', [[[1, 0, 0]], [[-1, 0, 0]]])
-            bad = replace(t, velocities=t.velocities.copy())
-            bad.velocities[1, 0, 2] = np.nan
-            with self.assertRaisesRegex(ValueError, 'Non-finite velocities'):
-                velocity_autocorrelation(bad, ['all'], dt_ps=.001, velocity_unit='A/ps')
+        bad = memory_universe([0, 10], [[[0., 0, 0]], [[1., 0, 0]]], [[10., 10, 10]] * 2, ['1'],
+                              velocities=np.array([[[1., 0, 0]], [[-1., 0, np.nan]]]))
+        with self.assertRaisesRegex(ValueError, 'Non-finite velocities'):
+            velocity_autocorrelation(bad, ['all'], dt_ps=.001, velocity_unit='A/ps')
 
     def test_zero_cv0_rejected_for_undefined_normalization(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -219,7 +216,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                       for m in range(5)]
         with tempfile.TemporaryDirectory() as tmp:
             t = velocity_dump(Path(tmp) / 'dump', velocities, types=types)
-            strided = velocity_autocorrelation(t, ['type:2'], dt_ps=.001,
+            strided = velocity_autocorrelation(t, ['type 2'], dt_ps=.001,
                                                velocity_unit='A/ps', stride=2)
             table = strided.tables['vacf']
             np.testing.assert_allclose(table['lag_ps'].to_numpy(), [0, .02, .04])
@@ -229,7 +226,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             self.assertEqual(strided.summary['frame_stride'], 2)
             np.testing.assert_array_equal(table['origin_atom_pairs_0'].to_numpy(), [6, 4, 2])
             self.assertEqual(strided.summary['vacf_selections'][0]['atoms'], 2)
-            expected = explicit_vacf(t.velocities[::2][:, 2:4], 'multiple')
+            expected = explicit_vacf(frames_of(t)[3][::2][:, 2:4], 'multiple')
             np.testing.assert_allclose(table['VACF_0_A2_ps2'].to_numpy(), expected.sum(axis=1))
 
             started = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
@@ -308,7 +305,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'at least one atom selection'):
                 velocity_autocorrelation(t, [], dt_ps=.001, velocity_unit='A/ps')
             with self.assertRaisesRegex(ValueError, 'no atoms'):
-                velocity_autocorrelation(t, ['type:9'], dt_ps=.001, velocity_unit='A/ps')
+                velocity_autocorrelation(t, ['type 9'], dt_ps=.001, velocity_unit='A/ps')
 
     def test_drift_diagnostic_is_recorded_and_not_subtracted(self):
         drift = [[[.5, 0, 0], [.5, 0, 0]]] * 3
@@ -330,7 +327,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                       [[0, 1, 1], [.5, -2, 1], [-1, 1, 0]]]
         with tempfile.TemporaryDirectory() as tmp:
             t = velocity_dump(Path(tmp) / 'dump', velocities, types=[1, 2, 2])
-            result = velocity_autocorrelation(t, ['type:1', 'type:2'], dt_ps=.0005,
+            result = velocity_autocorrelation(t, ['type 1', 'type 2'], dt_ps=.0005,
                                               velocity_unit='A/fs')
             table = result.tables['vacf']
             lag_count = table.height
@@ -339,7 +336,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                 self.assertEqual(len(values), lag_count, name)
                 self.assertTrue(np.isfinite(values).all(), name)
             self.assertEqual([item['selection'] for item in result.summary['vacf_selections']],
-                             ['type:1', 'type:2'])
+                             ['type 1', 'type 2'])
             self.assertEqual([item['column'] for item in result.summary['vacf_selections']],
                              ['VACF_0_A2_ps2', 'VACF_1_A2_ps2'])
             self.assertEqual([item['atoms'] for item in result.summary['vacf_selections']], [1, 2])
@@ -347,15 +344,6 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                              ['VACF_1_x_A2_ps2', 'VACF_1_y_A2_ps2', 'VACF_1_z_A2_ps2',
                               'VACF_1_A2_ps2', 'VACF_1_normalized', 'origin_atom_pairs_1'])
             self.assertTrue(np.isfinite(result.summary['mean_velocity_rms_A_ps']))
-
-    def test_trajectory_positional_construction_keeps_velocities_optional(self):
-        trajectory = Trajectory(np.array([0, 10]), np.array([1]),
-                                np.zeros((2, 1, 3)), np.array([[10., 10, 10]] * 2),
-                                np.array([[0., 0, 0]] * 2), {'type': np.array(['1'])},
-                                None, None, 'manual.dump')
-        self.assertIsNone(trajectory.velocities)
-        self.assertTrue(trajectory.select('type:1').all())
-        self.assertTrue(trajectory.fixed_box)
 
 
 if __name__ == '__main__':
