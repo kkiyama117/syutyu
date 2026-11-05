@@ -20,13 +20,16 @@ animate goto start
 def iter_dump_blocks(path):
     """1フレーム分の生の dump を、ファイル全体を読み込まずに順に返す。
 
-    引数:
-        - `path` — custom dump。
-    戻り値:
-        フレームごとのバイト列。原子列は問わずそのまま保つ。
-    例外:
-        `ValueError` — 見出しが9行でそろわない、原子数が正でない、セル境界が2列か3列でない、原子行が足りない。
-    注意:
+    Args:
+        path (str | os.PathLike): custom dump。
+
+    Returns:
+        Iterator[bytes]: フレームごとのバイト列。原子列は問わずそのまま保つ。
+
+    Raises:
+        ValueError: 見出しが9行でそろわない、原子数が正でない、セル境界が2列か3列でない、原子行が足りない。
+
+    Note:
         持ち出しのための検査用で、数値の解析には使わない。一般三斜晶やベクトル形式のセルは扱わない。
     """
     with Path(path).open('rb') as stream:
@@ -55,17 +58,20 @@ def iter_dump_blocks(path):
 def export_vmd(trajectory, output, *, stride=1):
     """指定フレームと VMD スクリプト・manifest・説明を1つの ZIP にまとめる。
 
-    引数:
-        - `trajectory` — custom dump。
-        - `output` — 作る ZIP。既存のパスは拒否する。
-        - `stride` — 何フレームおきに保存するか（1以上）。1 なら全バイトをそのまま残す。
-    戻り値:
-        manifest の辞書。元ファイルと保存フレームの SHA-256、枚数を含む。
-    例外:
-        `FileExistsError` — `output` が既にある。
-        `FileNotFoundError` — 軌跡がない。
-        `ValueError` — `stride` が正の整数でない、保存フレームが0。
-    注意:
+    Args:
+        trajectory (str | os.PathLike): custom dump。
+        output (str | os.PathLike): 作る ZIP。既存のパスは拒否する。
+        stride (int): 何フレームおきに保存するか（1以上）。1 なら全バイトをそのまま残す。
+
+    Returns:
+        dict[str, str | int]: manifest の辞書。元ファイルと保存フレームの SHA-256、枚数を含む。
+
+    Raises:
+        FileExistsError: ``output`` が既にある。
+        FileNotFoundError: 軌跡がない。
+        ValueError: ``stride`` が正の整数でない、保存フレームが0。
+
+    Note:
         間引きは表示用で、動力学の解析に使うと元の軌跡と違う結果になる。完成した ZIP だけを公開し、途中のファイルは残さない。
     """
     trajectory, output = Path(trajectory), Path(output)

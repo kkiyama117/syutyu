@@ -47,20 +47,24 @@ def mean_squared_displacement(trajectory, selections, *, dt_ps, start_step=None,
                               stride=1, laboratory=False, origin_mode='multiple', com_masses=None):
     """選択ごとに原子 MSD を計算する。拡散フィットは行わない。
 
-    引数:
-        - `trajectory` — `Trajectory`。
-        - `selections` — 選択式の並び。各選択が1つの系列になる。
-        - `dt_ps` — LAMMPS の 1 step 当たりの ps。
-        - `start_step`、`stop_step`、`stride` — 使うフレームの範囲と間引き。等間隔であること。
-        - `laboratory` — 可変セルで、セル伸縮を含む実験室座標の MSD を明示的に求める。
-        - `origin_mode` — `multiple`（全開始時刻）か `single`（最初の選択フレーム）。
-        - `com_masses` — dump の type ラベル → 質量 g/mol。与えると全原子の質量重み付き重心の変位を各原子から引く。選択ごとの重心は引かない。
-    戻り値:
-        `Result`。`tables['msd']` に `lag_ps`、`MSD_<i>_A2`、`origin_atom_pairs_<i>`。`summary` に `com_drift_removed`。除去したときは `com_masses` と `com_max_displacement_A`（Å）も入る。
-    例外:
-        `ValueError` — `dt_ps` が正でない、原点モードが不正、フレームが2未満か等間隔でない、選択が空、可変セルなのに非折り返し座標と `laboratory=True` がそろわない。
-        `ValueError` — `com_masses` がマッピングでない、type 列がない、使われている type の質量がない、質量が有限の正の数でない、`laboratory=True` と同時に与えた。
-    注意:
+    Args:
+        trajectory (Trajectory): 対象の軌跡。
+        selections (Sequence[str]): 選択式の並び。各選択が1つの系列になる。
+        dt_ps (float): LAMMPS の 1 step 当たりの ps。
+        start_step (int | None): 使うフレームの範囲と間引き。等間隔であること。
+        stop_step (int | None): 使うフレームの範囲と間引き。等間隔であること。
+        stride (int): 使うフレームの範囲と間引き。等間隔であること。
+        laboratory (bool): 可変セルで、セル伸縮を含む実験室座標の MSD を明示的に求める。
+        origin_mode (str): ``multiple`` （全開始時刻）か ``single`` （最初の選択フレーム）。
+        com_masses (Mapping[str, float] | None): dump の type ラベル → 質量 g/mol。与えると全原子の質量重み付き重心の変位を各原子から引く。選択ごとの重心は引かない。
+
+    Returns:
+        Result: ``tables['msd']`` に ``lag_ps``、``MSD_<i>_A2``、``origin_atom_pairs_<i>``。``summary`` に ``com_drift_removed``。除去したときは ``com_masses`` と ``com_max_displacement_A`` （Å）も入る。
+
+    Raises:
+        ValueError: ``dt_ps`` が正でない、原点モードが不正、フレームが2未満か等間隔でない、選択が空、可変セルなのに非折り返し座標と ``laboratory=True`` がそろわない。``com_masses`` がマッピングでない、type 列がない、使われている type の質量がない、質量が有限の正の数でない、``laboratory=True`` と同時に与えた。
+
+    Note:
         原子の MSD であり、分子重心の MSD ではない。重なった時間原点は独立でなく、平均二乗変位から平衡を主張しない。
     """
     if not np.isfinite(dt_ps) or dt_ps <= 0:

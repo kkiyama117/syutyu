@@ -10,17 +10,21 @@ from .store import Result
 def read_rdf(path, *, pairs=None, start_step=None, stop_step=None):
     """.gr 形式の RDF を読み、選んだブロックの平均を等重みで返す。
 
-    引数:
-        - `path` — `.gr` ファイル。`step 行数` の見出しの後に `index r g_0 CN_0 [g_1 CN_1 ...]` が続く。
-        - `pairs` — 表示用の (中心, 隣接) ラベル。省略時は `center_<i>` と `neighbor_<i>`。
-        - `start_step`、`stop_step` — 平均に使うブロックの step 範囲（両端を含む）。
-    戻り値:
-        `Result`。`tables['rdf']` は `r_center_A`、`r_upper_A`、`g_<i>`、`CN_<i>`。
-    例外:
-        `ValueError` — 見出し・行数・列数・step の単調増加・ビン中心の等間隔のいずれかが形式に合わない。
-    注意:
+    Args:
+        path (str | os.PathLike): ``.gr`` ファイル。step 行数 の見出しの後に ``index r g_0 CN_0 [g_1 CN_1 ...]`` が続く。
+        pairs (Sequence[tuple[str, str]] | None): 表示用の (中心, 隣接) ラベル。省略時は ``center_<i>`` と ``neighbor_<i>``。
+        start_step (int | None): 平均に使うブロックの step 範囲（両端を含む）。
+        stop_step (int | None): 平均に使うブロックの step 範囲（両端を含む）。
+
+    Returns:
+        Result: ``tables['rdf']`` は ``r_center_A``、``r_upper_A``、``g_<i>``、``CN_<i>``。
+
+    Raises:
+        ValueError: 見出し・行数・列数・step の単調増加・ビン中心の等間隔のいずれかが形式に合わない。
+
+    Note:
         距離は Å とみなす。規格化と原子対の除外は LAMMPS の入力側の設定をそのまま残し、g を規格化し直したり、平均密度から CN を作り直したりしない。
-        `pairs` は表示名であり、元素やタイプの対応を推測するものではない。
+        ``pairs`` は表示名であり、元素やタイプの対応を推測するものではない。
     """
     path = Path(path)
     records = []
@@ -98,16 +102,19 @@ def read_rdf(path, *, pairs=None, start_step=None, stop_step=None):
 def read_msd(files, *, dt_ps, origin_step, column=-1):
     """compute msd の fix ave/time 表を、系列名ごとに読む。
 
-    引数:
-        - `files` — 系列名→ファイルの辞書。全系列で step の刻みが同じであること。
-        - `dt_ps` — LAMMPS の 1 step 当たりの ps。
-        - `origin_step` — compute の原点にした step。省略できない。
-        - `column` — MSD の列。step の列は選べない。
-    戻り値:
-        `Result`。`tables['msd']` は `lag_ps` と `MSD_<i>_A2`。
-    例外:
-        `ValueError` — 列数や行数が足りない、非有限値、step が原点より前か増加しない、系列間で刻みが違う、step 列を選んだ。
-    注意:
+    Args:
+        files (Mapping[str, str | os.PathLike]): 系列名→ファイルの辞書。全系列で step の刻みが同じであること。
+        dt_ps (float): LAMMPS の 1 step 当たりの ps。
+        origin_step (int): compute の原点にした step。省略できない。
+        column (int): MSD の列。step の列は選べない。
+
+    Returns:
+        Result: ``tables['msd']`` は ``lag_ps`` と ``MSD_<i>_A2``。
+
+    Raises:
+        ValueError: 列数や行数が足りない、非有限値、step が原点より前か増加しない、系列間で刻みが違う、step 列を選んだ。
+
+    Note:
         選んだ列は Å² の全 MSD（成分や log ではない）を前提とする。座標の扱いと平均は LAMMPS の入力に従い、拡散係数や平衡性は推定しない。
     """
     if not files or not np.isfinite(dt_ps) or dt_ps <= 0:
@@ -144,17 +151,20 @@ def read_msd(files, *, dt_ps, origin_step, column=-1):
 def read_vacf(path, *, dt_ps, origin_step, velocity_unit, max_lag_ps=None):
     """compute vacf の表を読み、Å²/ps² へ換算して返す。
 
-    引数:
-        - `path` — step と vx*vx0、vy*vy0、vz*vz0、合計の5列を持つ表。
-        - `dt_ps` — LAMMPS の 1 step 当たりの ps。
-        - `origin_step` — compute の原点にした step。先頭の保存 step と一致すること。
-        - `velocity_unit` — 入力速度の単位。`A/fs` か `A/ps`。
-        - `max_lag_ps` — 残す lag の上限（両端を含む）。省略時は全 lag。
-    戻り値:
-        `Result`。`tables['vacf']` は `lag_ps`、成分 `VACF_0_x_A2_ps2` など、`VACF_0_A2_ps2`、`VACF_0_normalized`。
-    例外:
-        `ValueError` — 単位が2つ以外、5列でない、step が原点から始まらないか増加しない、成分の和が合計と合わない、lag 上限が範囲外、Cv(0) が正でない。
-    注意:
+    Args:
+        path (str | os.PathLike): step と vx*vx0、vy*vy0、vz*vz0、合計の5列を持つ表。
+        dt_ps (float): LAMMPS の 1 step 当たりの ps。
+        origin_step (int): compute の原点にした step。先頭の保存 step と一致すること。
+        velocity_unit (str): 入力速度の単位。``A/fs`` か ``A/ps``。
+        max_lag_ps (float | None): 残す lag の上限（両端を含む）。省略時は全 lag。
+
+    Returns:
+        Result: ``tables['vacf']`` は ``lag_ps``、成分 ``VACF_0_x_A2_ps2`` など、``VACF_0_A2_ps2``、``VACF_0_normalized``。
+
+    Raises:
+        ValueError: 単位が2つ以外、5列でない、step が原点から始まらないか増加しない、成分の和が合計と合わない、lag 上限が範囲外、Cv(0) が正でない。
+
+    Note:
         単一原点の値であり、複数原点の平均ではない。速度の平均や重心ドリフトの除去はしない。
     """
     if not np.isfinite(dt_ps) or dt_ps <= 0:

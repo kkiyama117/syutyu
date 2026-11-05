@@ -5,7 +5,7 @@ LAMMPS で分子動力学（MD）を実行し、その結果を Python で解析
 - [src/syutyu/](<src/syutyu/>)：数値実装・入出力・CLI。公開 API は `syutyu` パッケージから import します。
 - [tests/](<tests/>)：数値・入出力・CLI のテスト。
 - [docs/](<docs/index.md>)：[使い方](<docs/guide/usage.md>)・[計算方式](<docs/guide/analysis-methods.md>)・[API](<docs/reference/api.md>)。
-- [tools/](<tools/>)：環境の検査、API リファレンスの生成、公開範囲の検査。
+- [tools/](<tools/>)：環境の検査、公開範囲の検査。
 - `local/`：検証記録・閲覧用 LAMMPS ソース・キャッシュ（Git 管理外）。
 
 ```bash

@@ -9,17 +9,17 @@ import numpy as np
 class Trajectory:
     """dump 1つ分のフレーム列と、原子ごとの固定ラベル。
 
-    属性:
-        - `steps` — 各フレームの LAMMPS step（整数）。
-        - `ids` — 原子 ID。全フレームで同じ昇順にそろえてある。
-        - `positions` — 各フレームの座標。Å、周期セル内の絶対座標。
-        - `boxes` — 各フレームの直方体セルの辺の長さ。Å。
-        - `origins` — 各フレームのセル原点。Å。
-        - `labels` — dump にあった `type`・`element`・`mol` の原子ごとの値（文字列）。
-        - `unwrapped` — 明示的な非折り返し座標。dump に xu/yu/zu か image flag があるときだけ入り、なければ None。
-        - `unwrap_source` — `unwrapped` の作り方（`xu/yu/zu` か `image flags`）。なければ None。
-        - `source_path` — 読み込んだファイルの絶対パス。
-        - `velocities` — 各フレームの速度。ID 順、保存時の単位のまま。vx/vy/vz がそろわなければ None。
+    Attributes:
+        steps (numpy.ndarray): 各フレームの LAMMPS step（整数）。
+        ids (numpy.ndarray): 原子 ID。全フレームで同じ昇順にそろえてある。
+        positions (numpy.ndarray): 各フレームの座標。Å、周期セル内の絶対座標。
+        boxes (numpy.ndarray): 各フレームの直方体セルの辺の長さ。Å。
+        origins (numpy.ndarray): 各フレームのセル原点。Å。
+        labels (dict): dump にあった ``type``・``element``・``mol`` の原子ごとの値（文字列）。
+        unwrapped (numpy.ndarray | None): 明示的な非折り返し座標。dump に xu/yu/zu か image flag があるときだけ入り、なければ None。
+        unwrap_source (str | None): ``unwrapped`` の作り方（``xu/yu/zu`` か ``image flags``）。なければ None。
+        source_path (str | None): 読み込んだファイルの絶対パス。
+        velocities (numpy.ndarray | None): 各フレームの速度。ID 順、保存時の単位のまま。vx/vy/vz がそろわなければ None。
     """
     steps: np.ndarray
     ids: np.ndarray
@@ -35,14 +35,17 @@ class Trajectory:
     def select(self, expression):
         """選択式に合う原子の真偽マスクを返す。
 
-        引数:
-            - `expression` — `all`、`type:3`、`element:Na`、`mol:12` のいずれか。ラベルは dump にあった列だけを使う。
-        戻り値:
-            原子数と同じ長さの真偽配列。
-        例外:
-            `ValueError` — 形式が `キー:値` でない、dump にないキーを指す、または1個も一致しない。
-        注意:
-            元素から原子タイプや力場部位を推測しない。`mol:0` は未設定を表すことがあり、選んでも分子として意味があるとは限らない。
+        Args:
+            expression (str): ``all``、``type:3``、``element:Na``、``mol:12`` のいずれか。ラベルは dump にあった列だけを使う。
+
+        Returns:
+            numpy.ndarray: 原子数と同じ長さの真偽配列。
+
+        Raises:
+            ValueError: 形式がキー:値 でない、dump にないキーを指す、または1個も一致しない。
+
+        Note:
+            元素から原子タイプや力場部位を推測しない。``mol:0`` は未設定を表すことがあり、選んでも分子として意味があるとは限らない。
         """
         if expression == 'all':
             return np.ones(len(self.ids), dtype=bool)
@@ -58,8 +61,8 @@ class Trajectory:
     def fixed_box(self):
         """全フレームでセルの辺と原点が変わっていないかを返す。
 
-        戻り値:
-            変化が許容差 `1e-10` 未満なら True。可変体積の判定に使う。
+        Returns:
+            bool: 変化が許容差 ``1e-10`` 未満なら True。可変体積の判定に使う。
         """
         return (np.allclose(self.boxes, self.boxes[0], rtol=0, atol=1e-10)
                 and np.allclose(self.origins, self.origins[0], rtol=0, atol=1e-10))
@@ -68,14 +71,19 @@ class Trajectory:
 def frame_indices(trajectory, *, start_step=None, stop_step=None, stride=1):
     """step の閉区間に入るフレーム位置を、間引きながら返す。
 
-    引数:
-        - `trajectory` — `Trajectory`。`start_step`・`stop_step` の省略時は最初と最後の step を使う。
-        - `stride` — 選んだフレームを何個おきに残すか（1以上）。
-    戻り値:
-        フレーム位置の整数配列。
-    例外:
-        `ValueError` — `stride` が正の整数でない、`start_step > stop_step`、該当フレームがない。
-    注意:
+    Args:
+        trajectory (Trajectory): 対象の軌跡。
+        start_step (int | None): ``start_step``・``stop_step`` の省略時は最初と最後の step を使う。
+        stop_step (int | None): ``start_step``・``stop_step`` の省略時は最初と最後の step を使う。
+        stride (int): 選んだフレームを何個おきに残すか（1以上）。
+
+    Returns:
+        numpy.ndarray: フレーム位置の整数配列。
+
+    Raises:
+        ValueError: ``stride`` が正の整数でない、``start_step > stop_step``、該当フレームがない。
+
+    Note:
         間引きは区間で絞った後に行う。step が等間隔でない軌跡は、MSD や VACF 側の等間隔検査で止まる。
     """
     if not isinstance(stride, int) or isinstance(stride, bool) or stride < 1:
@@ -93,15 +101,18 @@ def frame_indices(trajectory, *, start_step=None, stop_step=None, stride=1):
 def read_trajectory(path):
     """LAMMPS の custom dump を読み、Trajectory を返す。
 
-    引数:
-        - `path` — custom dump のファイル。`ITEM: TIMESTEP` で始まるフレームを並べたもの。
-    戻り値:
-        `Trajectory`。座標は Å の絶対座標、セルは辺の長さ。速度は vx/vy/vz があれば ID 順で入る。
-    例外:
-        `ValueError` — 直方体・3方向周期（`pp pp pp`）以外のセル、ID やラベルの変化、重複 ID、step の減少、非有限値、vx/vy/vz の一部だけの出力。
-    注意:
-        xu/yu/zu か image flag があれば非折り返し座標も作り、`unwrap_source` に残す。`q` などの追加列は読み捨てる。
-        単位は入力のまま扱い、Å 以外への換算はしない。`reset_timestep` をまたぐ軌跡は分割して読む。
+    Args:
+        path (str | os.PathLike): custom dump のファイル。``ITEM: TIMESTEP`` で始まるフレームを並べたもの。
+
+    Returns:
+        Trajectory: 座標は Å の絶対座標、セルは辺の長さ。速度は vx/vy/vz があれば ID 順で入る。
+
+    Raises:
+        ValueError: 直方体・3方向周期（``pp pp pp``）以外のセル、ID やラベルの変化、重複 ID、step の減少、非有限値、vx/vy/vz の一部だけの出力。
+
+    Note:
+        xu/yu/zu か image flag があれば非折り返し座標も作り、``unwrap_source`` に残す。``q`` などの追加列は読み捨てる。
+        単位は入力のまま扱い、Å 以外への換算はしない。``reset_timestep`` をまたぐ軌跡は分割して読む。
     """
     steps, positions, boxes, origins, unwrapped, velocities = [], [], [], [], [], []
     ids0, labels0, columns0, unwrap_source = None, None, None, None

@@ -11,9 +11,9 @@ uv run --locked syutyu --help
 
 ```python
 from syutyu import (
-    Result, Trajectory, read_trajectory, read_thermo, save_result, load_result,
+    Result, Trajectory, read_trajectory, read_thermo, read_thermo_blocks, save_result, load_result,
     Site, write_charge_data,
-    rdf, msd, vacf, fit_diffusion, summarize_thermo,
+    rdf, msd, vacf, fit_diffusion, DiffusionFit, summarize_thermo,
     run_lammps, save_figure, export_vmd,
 )
 ```

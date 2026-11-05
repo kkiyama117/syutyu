@@ -12,14 +12,17 @@ VIEWS = {'rdf': 'RDF', 'cn': 'Coordination', 'msd': 'MSD', 'vacf': 'VACF',
 def available_views(result):
     """Result から描ける表示の一覧を返す。
 
-    引数:
-        - `result` — `Result`。
-    戻り値:
-        キー→表示名の辞書。`rdf`、`cn`、`msd`、`vacf`、`vacf-normalized`、`temperature` のうち描けるもの。
-    例外:
-        `ValueError` — 描ける表がない。
-    注意:
-        `temperature` は `thermo` 表に `Temp` 列があるときだけ加わる。
+    Args:
+        result (Result): ``Result``。
+
+    Returns:
+        dict[str, str]: キー→表示名の辞書。``rdf``、``cn``、``msd``、``vacf``、``vacf-normalized``、``temperature`` のうち描けるもの。
+
+    Raises:
+        ValueError: 描ける表がない。
+
+    Note:
+        ``temperature`` は ``thermo`` 表に ``Temp`` 列があるときだけ加わる。
     """
     keys = []
     if 'rdf' in result.tables:
@@ -38,10 +41,11 @@ def available_views(result):
 def decorate_figure(fig, result):
     """図の題名・条件・注意書きを summary から書く。
 
-    引数:
-        - `fig` — Matplotlib の Figure。
-        - `result` — `Result`。`summary` の `title`、`atoms`、`selected_steps`、`method`、`coordinate_frame` などを読む。
-    注意:
+    Args:
+        fig (matplotlib.figure.Figure): Matplotlib の ``Figure``。
+        result (Result): ``Result``。``summary`` の ``title``、``atoms``、``selected_steps``、``method``、``coordinate_frame`` などを読む。
+
+    Note:
         可変セルの実験室座標 MSD では、補正済みの拡散係数ではないと明示する。
     """
     s = result.summary
@@ -64,15 +68,17 @@ def decorate_figure(fig, result):
 def draw_view(ax, result, view=None, compare=True):
     """1つの軸に表示を描き、図の下へ出す注記を返す。
 
-    引数:
-        - `ax` — 描画先の Matplotlib の軸。内容は消してから描く。
-        - `result` — `Result`。
-        - `view` — 表示のキー。省略時は最初の表示。
-        - `compare` — 参照線や過去フレームとの比較を重ねる。
-    戻り値:
-        図に添える注記の文字列。規格化や原点の前提を短く書く。
-    例外:
-        `ValueError` — `view` が `available_views` にない。
+    Args:
+        ax (matplotlib.axes.Axes): 描画先の Matplotlib の軸。内容は消してから描く。
+        result (Result): ``Result``。
+        view (str | None): 表示のキー。省略時は最初の表示。
+        compare (bool): 参照線や過去フレームとの比較を重ねる。
+
+    Returns:
+        str: 図に添える注記の文字列。規格化や原点の前提を短く書く。
+
+    Raises:
+        ValueError: ``view`` が ``available_views`` にない。
     """
     views = available_views(result)
     view = view or next(iter(views))
@@ -143,14 +149,16 @@ def draw_view(ax, result, view=None, compare=True):
 def make_figure(result, view=None, compare=True):
     """描画済みの Figure を作って返す。保存はしない。
 
-    引数:
-        - `result` — `Result`。
-        - `view` — 表示のキー。省略時は最初の表示。
-        - `compare` — 参照線や過去フレームとの比較を重ねる。
-    戻り値:
-        Matplotlib の `Figure`。10×6.5 インチ。
-    例外:
-        `ValueError` — 描ける表がない、または `view` が使えない。
+    Args:
+        result (Result): ``Result``。
+        view (str | None): 表示のキー。省略時は最初の表示。
+        compare (bool): 参照線や過去フレームとの比較を重ねる。
+
+    Returns:
+        matplotlib.figure.Figure: Matplotlib の ``Figure``。10×6.5 インチ。
+
+    Raises:
+        ValueError: 描ける表がない、または ``view`` が使えない。
     """
     fig = Figure(figsize=(10, 6.5))
     FigureCanvasAgg(fig)
@@ -164,18 +172,21 @@ def make_figure(result, view=None, compare=True):
 def save_figure(result, output, view=None, compare=True, *, overwrite=False):
     """Result を PNG に描いて保存する。
 
-    引数:
-        - `result` — `Result`。
-        - `output` — 保存先のパス。親フォルダは作る。
-        - `view` — `available_views` のキー。省略時は最初の表示。
-        - `compare` — 参照線や過去フレームとの比較を重ねる。
-        - `overwrite` — 既存ファイルへの上書きを明示する。
-    戻り値:
-        保存先の `Path`。解像度は 160 dpi。
-    例外:
-        `FileExistsError` — 既存ファイルがあり `overwrite` を指定していない。
-        `ValueError` — 描ける表がない、または `view` が使えない。
-    注意:
+    Args:
+        result (Result): ``Result``。
+        output (str | os.PathLike): 保存先のパス。親フォルダは作る。
+        view (str | None): ``available_views`` のキー。省略時は最初の表示。
+        compare (bool): 参照線や過去フレームとの比較を重ねる。
+        overwrite (bool): 既存ファイルへの上書きを明示する。
+
+    Returns:
+        pathlib.Path: 保存先の ``Path``。解像度は 160 dpi。
+
+    Raises:
+        FileExistsError: 既存ファイルがあり ``overwrite`` を指定していない。
+        ValueError: 描ける表がない、または ``view`` が使えない。
+
+    Note:
         GUI を開かない。
     """
     output = Path(output)

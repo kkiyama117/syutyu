@@ -30,19 +30,23 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
                              start_step=None, stride=1, origin_mode='multiple', max_lag_ps=None):
     """選択ごとに速度自己相関を計算する。複数時間原点が Colab の定義。
 
-    引数:
-        - `trajectory` — 速度を含む `Trajectory`。
-        - `selections` — 選択式の並び。各選択が1つの系列になる。
-        - `dt_ps` — LAMMPS の 1 step 当たりの ps。dump の間隔ではない。
-        - `velocity_unit` — `A/fs` か `A/ps`。`A/fs` は二乗する前に換算する。
-        - `start_step`、`stride` — 使うフレームの範囲と間引き。等間隔であること。
-        - `origin_mode` — `multiple`（全開始時刻の平均）か `single`（フレーム0のみ）。
-        - `max_lag_ps` — 残す lag の上限（両端を含む）。省略時は全 lag。
-    戻り値:
-        `Result`。`tables['vacf']` に `lag_ps`、成分 `VACF_<i>_x_A2_ps2` など、`VACF_<i>_A2_ps2`、`VACF_<i>_normalized`、`origin_atom_pairs_<i>`。
-    例外:
-        `ValueError` — `dt_ps` や単位・原点モードが不正、選択が空、フレームが2未満か等間隔でない、速度がないか非有限、lag 上限が範囲外、Cv(0) が0。
-    注意:
+    Args:
+        trajectory (Trajectory): 速度を含む ``Trajectory``。
+        selections (Sequence[str]): 選択式の並び。各選択が1つの系列になる。
+        dt_ps (float): LAMMPS の 1 step 当たりの ps。dump の間隔ではない。
+        velocity_unit (str): ``A/fs`` か ``A/ps``。``A/fs`` は二乗する前に換算する。
+        start_step (int | None): 使うフレームの範囲と間引き。等間隔であること。
+        stride (int): 使うフレームの範囲と間引き。等間隔であること。
+        origin_mode (str): ``multiple`` （全開始時刻の平均）か ``single`` （フレーム0のみ）。
+        max_lag_ps (float | None): 残す lag の上限（両端を含む）。省略時は全 lag。
+
+    Returns:
+        Result: ``tables['vacf']`` に ``lag_ps``、成分 ``VACF_<i>_x_A2_ps2`` など、``VACF_<i>_A2_ps2``、``VACF_<i>_normalized``、``origin_atom_pairs_<i>``。
+
+    Raises:
+        ValueError: ``dt_ps`` や単位・原点モードが不正、選択が空、フレームが2未満か等間隔でない、速度がないか非有限、lag 上限が範囲外、Cv(0) が0。
+
+    Note:
         速度は保存されたまま使い、平均も重心ドリフトも引かない。拡散係数・粘性・スペクトルの推定はしない。
     """
     if not np.isfinite(dt_ps) or dt_ps <= 0:

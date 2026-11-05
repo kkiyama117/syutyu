@@ -13,7 +13,10 @@ project = 'syutyu'
 author = 'kkiyama117'
 language = 'ja'
 
-extensions = ['myst_parser']
+extensions = ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.autosummary', 'sphinx.ext.napoleon']
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+autodoc_member_order = 'bysource'
 myst_heading_anchors = 3
 
 html_theme = 'furo'

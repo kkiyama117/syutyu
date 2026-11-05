@@ -81,21 +81,24 @@ def run_lammps(input_file, output_root, *, assets=(), ranks=2, timeout=180,
                executable='lmp') -> Path:
     """入力と明示した補助ファイルを新しいディレクトリへ写し、実行してそのパスを返す。
 
-    引数:
-        - `input_file` — LAMMPS の入力。親フォルダを基準に補助ファイルを解決する。
-        - `output_root` — run フォルダを作る場所。既存でもよい。
-        - `assets` — 入力の親フォルダからの相対パス（その配下の絶対パスも可）。サブフォルダは保たれる。
-        - `ranks` — MPI プロセス数。1 なら `lmp` を直接、2 以上なら `mpirun -np` で起動する。
-        - `timeout` — 1回の実行の上限秒。`lmp -help` は最大30秒。
-        - `executable` — LAMMPS の実行ファイル名。PATH から解決する。
-    戻り値:
-        作った run フォルダの `Path`。`run.json` に入力ハッシュ・コマンド・成否・時間・警告・出力を残す。
-    例外:
-        `ValueError` — `ranks` や `timeout` が不正、`..` による移動、入力の外を指すパス、`run.json` などの予約名、重複した入力。
-        `FileNotFoundError` — 実行ファイルや `mpirun` が見つからない。
-        `RuntimeError` — `-help` の失敗、非ゼロ終了、出力の `ERROR` 行、時間切れ、その他の実行失敗。
-    注意:
-        失敗した run もフォルダと `run.json` を残す。入力と過去の run は書き換えない。POSIX では時間切れや中断時にプロセスグループを止める。
+    Args:
+        input_file (str | os.PathLike): LAMMPS の入力。親フォルダを基準に補助ファイルを解決する。
+        output_root (str | os.PathLike): run フォルダを作る場所。既存でもよい。
+        assets (Sequence[str | os.PathLike]): 入力の親フォルダからの相対パス（その配下の絶対パスも可）。サブフォルダは保たれる。
+        ranks (int): MPI プロセス数。1 なら ``lmp`` を直接、2 以上なら ``mpirun -np`` で起動する。
+        timeout (float): 1回の実行の上限秒。``lmp -help`` は最大30秒。
+        executable (str): LAMMPS の実行ファイル名。PATH から解決する。
+
+    Returns:
+        pathlib.Path: 作った run フォルダの ``Path``。``run.json`` に入力ハッシュ・コマンド・成否・時間・警告・出力を残す。
+
+    Raises:
+        ValueError: ``ranks`` や ``timeout`` が不正、``..`` による移動、入力の外を指すパス、``run.json`` などの予約名、重複した入力。
+        FileNotFoundError: 実行ファイルや ``mpirun`` が見つからない。
+        RuntimeError: ``-help`` の失敗、非ゼロ終了、出力の ``ERROR`` 行、時間切れ、その他の実行失敗。
+
+    Note:
+        失敗した run もフォルダと ``run.json`` を残す。入力と過去の run は書き換えない。POSIX では時間切れや中断時にプロセスグループを止める。
     """
     if not isinstance(ranks, int) or isinstance(ranks, bool) or ranks < 1:
         raise ValueError('ranks must be a positive integer')

@@ -6,15 +6,18 @@ import numpy as np
 
 
 def read_thermo_blocks(path) -> list[dict[str, np.ndarray]]:
-    """`Step` で始まり `Loop time` で終わる表を、ブロックごとに分けて読む。
+    """``Step`` で始まり ``Loop time`` で終わる表を、ブロックごとに分けて読む。
 
-    引数:
-        - `path` — LAMMPS の log または screen 出力。
-    戻り値:
-        ブロックごとの辞書（列名→numpy 配列）のリスト。列名と step はブロック間で違ってよい。
-    例外:
-        `ValueError` — 列名の重複、列数や数値の不一致、`Loop time` のない未完了ブロック。
-    注意:
+    Args:
+        path (str | os.PathLike): LAMMPS の log または screen 出力。
+
+    Returns:
+        list[dict[str, numpy.ndarray]]: ブロックごとの辞書（列名→numpy 配列）のリスト。列名と step はブロック間で違ってよい。
+
+    Raises:
+        ValueError: 列名の重複、列数や数値の不一致、``Loop time`` のない未完了ブロック。
+
+    Note:
         WARNING などの表でない行は読み飛ばす。値は保存された単位のままで、換算しない。
     """
     blocks = []
@@ -52,18 +55,21 @@ def read_thermo_blocks(path) -> list[dict[str, np.ndarray]]:
 
 
 def read_thermo(path, *, block=-1, dt_ps) -> dict[str, np.ndarray]:
-    """1つの thermo ブロックを選び、`time_ps` を加えて返す。
+    """1つの thermo ブロックを選び、``time_ps`` を加えて返す。
 
-    引数:
-        - `path` — LAMMPS の log または screen 出力。
-        - `block` — 選ぶブロックの番号。負なら末尾から数える。省略時は最後のブロック。
-        - `dt_ps` — LAMMPS の 1 step 当たりの ps。`timestep` コマンドの値そのものではない。
-    戻り値:
-        列名→numpy 配列の辞書。`time_ps = Step * dt_ps` を加える。
-    例外:
-        `ValueError` — `dt_ps` が正でない、ブロックがない、選択ブロックが空・非有限・step が増加しない、`time_ps` 列と衝突する。
-        `IndexError` — ブロック番号が範囲外。
-    注意:
+    Args:
+        path (str | os.PathLike): LAMMPS の log または screen 出力。
+        block (int): 選ぶブロックの番号。負なら末尾から数える。省略時は最後のブロック。
+        dt_ps (float): LAMMPS の 1 step 当たりの ps。``timestep`` コマンドの値そのものではない。
+
+    Returns:
+        dict[str, numpy.ndarray]: 列名→numpy 配列の辞書。``time_ps = Step * dt_ps`` を加える。
+
+    Raises:
+        ValueError: ``dt_ps`` が正でない、ブロックがない、選択ブロックが空・非有限・step が増加しない、``time_ps`` 列と衝突する。
+        IndexError: ブロック番号が範囲外。
+
+    Note:
         ブロックは結合しない。reset の前後を1つの時系列として扱わない。
     """
     if not np.isfinite(dt_ps) or dt_ps <= 0:

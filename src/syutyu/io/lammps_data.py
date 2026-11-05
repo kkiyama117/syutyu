@@ -9,10 +9,10 @@ from pathlib import Path
 class Site:
     """直方晶の単位胞にある1原子。
 
-    属性:
-        - `type` — LAMMPS の原子タイプ。1 以上。
-        - `charge` — 電荷。e。
-        - `fractional` — 分率座標。各成分は [0, 1)。セル長を掛けると Å の座標になる。
+    Attributes:
+        type (int): LAMMPS の原子タイプ。1 以上。
+        charge (float): 電荷。e。
+        fractional (tuple[float, float, float]): 分率座標。各成分は [0, 1)。セル長を掛けると Å の座標になる。
     """
     type: int
     charge: float
@@ -91,20 +91,23 @@ def write_charge_data(path, lengths, sites, masses, *, title='syutyu charge data
                       overwrite=False) -> Path:
     """分率座標の単位胞から LAMMPS の atom_style charge 用 data ファイルを書く。
 
-    引数:
-        - `path` — 書き出すファイル。親ディレクトリは存在すること。
-        - `lengths` — 直方晶セルの (a, b, c)。Å。三つの有限な正の値。
-        - `sites` — 空でない `Site` の列。原子 ID はこの順に 1 から振る。
-        - `masses` — 原子タイプから質量（g/mol）への辞書。`sites` が使うタイプをすべて含み、使わないタイプを含まないこと。
-        - `title` — 1行目の見出し。改行を含まない空でない1行。
-        - `overwrite` — 既存ファイルを上書きすることを明示する。省略時は拒否する。
-    戻り値:
-        書き出したファイルの `Path`。
-    例外:
-        `ValueError` — 長さ・原子タイプ・分率座標・電荷・質量・タイプの対応・`title` のいずれかが規則に合わない。
-        `FileExistsError` — `path` が存在し `overwrite` を指定していない。
-        `FileNotFoundError` — `path` の親ディレクトリがない。
-    注意:
+    Args:
+        path (str | os.PathLike): 書き出すファイル。親ディレクトリは存在すること。
+        lengths (Sequence[float]): 直方晶セルの (a, b, c)。Å。三つの有限な正の値。
+        sites (Sequence[Site]): 空でない ``Site`` の列。原子 ID はこの順に 1 から振る。
+        masses (Mapping[int, float]): 原子タイプから質量（g/mol）への辞書。``sites`` が使うタイプをすべて含み、使わないタイプを含まないこと。
+        title (str): 1行目の見出し。改行を含まない空でない1行。
+        overwrite (bool): 既存ファイルを上書きすることを明示する。省略時は拒否する。
+
+    Returns:
+        pathlib.Path: 書き出したファイルの ``Path``。
+
+    Raises:
+        ValueError: 長さ・原子タイプ・分率座標・電荷・質量・タイプの対応・``title`` のいずれかが規則に合わない。
+        FileExistsError: ``path`` が存在し ``overwrite`` を指定していない。
+        FileNotFoundError: ``path`` の親ディレクトリがない。
+
+    Note:
         セルは原点 0 の直方晶で、角度は指定しない。電荷は e、長さは Å、質量は g/mol。
     """
     path = Path(path)

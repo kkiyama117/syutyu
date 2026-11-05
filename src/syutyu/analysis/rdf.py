@@ -11,20 +11,25 @@ def radial_distribution(trajectory, pairs, *, rmax, bins=200, start_step=None, s
                         stride=1, intermolecular=False, normalization):
     """中心と隣接の組ごとに、フレーム平均の RDF と積算配位数を返す。
 
-    引数:
-        - `trajectory` — `Trajectory`。
-        - `pairs` — `(中心, 隣接)` の選択式の並び。例 `('type:1', 'type:2')`。
-        - `rmax` — g(r) の上限。Å。対象全フレームの最短辺の半分以下。
-        - `bins` — ビン数。既定 200。
-        - `start_step`、`stop_step`、`stride` — 使うフレームの範囲と間引き。
-        - `intermolecular` — 同じ分子（mol が同じで 0 でない）の原子対を除く。
-        - `normalization` — `finite`（分母 `N_A*N_B-N_overlap`）か `population`（`N_A*N_B`）。必須。
-    戻り値:
-        `Result`。`tables['rdf']` に `r_center_A`、`r_upper_A`、`g_<i>`、`CN_<i>`、`ordered_counts_<i>`。
-    例外:
-        `ValueError` — `normalization` が2つ以外、`rmax` が範囲外、`pairs` が空、`intermolecular` なのに mol 列がない。
-    注意:
-        各フレームの体積で規格化し、CN は中心原子1個あたりの直接カウント。可変体積では平均 g に平均密度を掛け直さない。LAMMPS の `special_bonds` の除外は再現しない。
+    Args:
+        trajectory (Trajectory): 対象の軌跡。
+        pairs (Sequence[tuple[str, str]]): ``(中心, 隣接)`` の選択式の並び。例 ``('type:1', 'type:2')``。
+        rmax (float): g(r) の上限。Å。対象全フレームの最短辺の半分以下。
+        bins (int): ビン数。既定 200。
+        start_step (int | None): 使うフレームの範囲と間引き。
+        stop_step (int | None): 使うフレームの範囲と間引き。
+        stride (int): 使うフレームの範囲と間引き。
+        intermolecular (bool): 同じ分子（mol が同じで 0 でない）の原子対を除く。
+        normalization (str): ``finite`` （分母 ``N_A*N_B-N_overlap``）か ``population`` （``N_A*N_B``）。必須。
+
+    Returns:
+        Result: ``tables['rdf']`` に ``r_center_A``、``r_upper_A``、``g_<i>``、``CN_<i>``、``ordered_counts_<i>``。
+
+    Raises:
+        ValueError: ``normalization`` が2つ以外、``rmax`` が範囲外、``pairs`` が空、``intermolecular`` なのに mol 列がない。
+
+    Note:
+        各フレームの体積で規格化し、CN は中心原子1個あたりの直接カウント。可変体積では平均 g に平均密度を掛け直さない。LAMMPS の ``special_bonds`` の除外は再現しない。
     """
     if normalization not in ('population', 'finite'):
         raise ValueError('normalization must be population or finite')

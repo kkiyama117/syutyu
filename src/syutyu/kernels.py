@@ -6,12 +6,14 @@ import numpy as np
 def minimum_image(delta, box):
     """相対ベクトルを各方向 [-L/2, L/2] に戻す。
 
-    引数:
-        - `delta` — 相対ベクトル。Å。末尾の軸が x, y, z。
-        - `box` — 直方体セルの辺の長さ。Å。
-    戻り値:
-        最小像へ移した相対ベクトル。Å。
-    注意:
+    Args:
+        delta (numpy.ndarray): 相対ベクトル。Å。末尾の軸が x, y, z。
+        box (numpy.ndarray): 直方体セルの辺の長さ。Å。
+
+    Returns:
+        numpy.ndarray: 最小像へ移した相対ベクトル。Å。
+
+    Note:
         直方体セルのみ。三斜晶の tilt は扱わない。
     """
     return delta - box * np.rint(delta / box)
@@ -20,17 +22,20 @@ def minimum_image(delta, box):
 def pair_rdf(positions, box, edges, *, normalization):
     """全フレームの i<j を数え、g(r) と積算配位数を返す。
 
-    引数:
-        - `positions` — フレーム×原子×3 の座標。Å。
-        - `box` — 直方体セルの辺の長さ。Å。
-        - `edges` — ビンの境界。0 から始まり、最短辺の半分以下で終わること。
-        - `normalization` — `population`（密度 `N/V`）か `finite`（`(N-1)/V`、Colab の有限N補正）。必須。
-    戻り値:
-        `(g, cn, counts)`。`counts` はビンごとの原子対数、`cn` はビン上端までの平均隣接原子数（自分自身を含まない）。
-    例外:
-        `ValueError` — `normalization` が2つ以外、フレームがないか原子が2個未満、ビンの範囲が不正。
-    注意:
-        有限Nの理想気体で `population` は `1-1/N`、`finite` は 1 になる。規格化を既定値で継承させないため、キーワード必須にしている。
+    Args:
+        positions (numpy.ndarray): フレーム×原子×3 の座標。Å。
+        box (numpy.ndarray): 直方体セルの辺の長さ。Å。
+        edges (numpy.ndarray): ビンの境界。0 から始まり、最短辺の半分以下で終わること。
+        normalization (str): ``population`` （密度 ``N/V``）か ``finite`` （``(N-1)/V``、Colab の有限N補正）。必須。
+
+    Returns:
+        tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]: ``(g, cn, counts)``。``counts`` はビンごとの原子対数、``cn`` はビン上端までの平均隣接原子数（自分自身を含まない）。
+
+    Raises:
+        ValueError: ``normalization`` が2つ以外、フレームがないか原子が2個未満、ビンの範囲が不正。
+
+    Note:
+        有限Nの理想気体で ``population`` は ``1-1/N``、``finite`` は 1 になる。規格化を既定値で継承させないため、キーワード必須にしている。
     """
     if normalization not in ('population', 'finite'):
         raise ValueError('normalization must be population or finite')
@@ -56,12 +61,14 @@ def pair_rdf(positions, box, edges, *, normalization):
 def unwrap(positions, box):
     """隣接フレームの最小像変位を積算して非折り返し座標を作る。
 
-    引数:
-        - `positions` — フレーム×原子×3 の折り返し座標。Å。
-        - `box` — 直方体セルの辺の長さ。Å。固定セルを前提とする。
-    戻り値:
-        先頭フレームを基準に積算した座標。Å。
-    注意:
+    Args:
+        positions (numpy.ndarray): フレーム×原子×3 の折り返し座標。Å。
+        box (numpy.ndarray): 直方体セルの辺の長さ。Å。固定セルを前提とする。
+
+    Returns:
+        numpy.ndarray: 先頭フレームを基準に積算した座標。Å。
+
+    Note:
         各成分の真の変位が L/2 未満であることが前提。image flag のない dump では、この前提そのものを確かめられない。
     """
     increments = minimum_image(np.diff(positions, axis=0), box)
@@ -71,11 +78,13 @@ def unwrap(positions, box):
 def msd_multi_origin(unwrapped):
     """lag ごとに可能な全開始時刻と原子を平均した MSD を返す。
 
-    引数:
-        - `unwrapped` — フレーム×原子×3 の非折り返し座標。Å。
-    戻り値:
-        `(msd, samples)`。`msd[lag]` は Å²、`samples[lag]` は使った (開始時刻, 原子) の組の数。
-    注意:
+    Args:
+        unwrapped (numpy.ndarray): フレーム×原子×3 の非折り返し座標。Å。
+
+    Returns:
+        tuple[numpy.ndarray, numpy.ndarray]: ``(msd, samples)``。``msd[lag]`` は Å²、``samples[lag]`` は使った (開始時刻, 原子) の組の数。
+
+    Note:
         重なった標本は独立でない。lag 0 は 0 として返す。
     """
     frames, n, _ = unwrapped.shape
