@@ -27,7 +27,8 @@ def _correlations(velocities, lags, origin_mode):
 
 
 def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
-                             start_step=None, stride=1, origin_mode='multiple', max_lag_ps=None):
+                             start_step=None, stop_step=None, stride=1, origin_mode='multiple',
+                             max_lag_ps=None):
     """選択ごとに速度自己相関を計算する。複数時間原点が Colab の定義。
 
     Args:
@@ -36,6 +37,7 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
         dt_ps (float): LAMMPS の 1 step 当たりの ps。dump の間隔ではない。
         velocity_unit (str): ``A/fs`` か ``A/ps``。``A/fs`` は二乗する前に換算する。
         start_step (int | None): 使うフレームの範囲と間引き。等間隔であること。
+        stop_step (int | None): 使うフレームの範囲と間引き。等間隔であること。
         stride (int): 使うフレームの範囲と間引き。等間隔であること。
         origin_mode (str): ``multiple`` （全開始時刻の平均）か ``single`` （フレーム0のみ）。
         max_lag_ps (float | None): 残す lag の上限（両端を含む）。省略時は全 lag。
@@ -57,7 +59,7 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
         raise ValueError("origin_mode must be 'multiple' (Colab) or 'single' (frame 0 only)")
     if not selections:
         raise ValueError('Specify at least one atom selection')
-    frames = _frames(trajectory, start_step=start_step, stride=stride)
+    frames = _frames(trajectory, start_step=start_step, stop_step=stop_step, stride=stride)
     steps = _steps(trajectory)[frames]
     if len(frames) < 2 or not np.all(np.diff(steps) == steps[1] - steps[0]):
         raise ValueError('VACF needs at least two uniformly spaced selected frames')

@@ -1,10 +1,12 @@
 """VACF unit tests: Colab multiple-origin definition, units, parsing and rejections."""
 from pathlib import Path
+import re
 import tempfile
 import unittest
 
 import numpy as np
 
+import syutyu
 from syutyu import read_trajectory
 from syutyu.analysis.vacf import velocity_autocorrelation
 from support import frames_of, memory_universe, write_dump
@@ -242,6 +244,31 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                                          start_step=45)
             with self.assertRaisesRegex(ValueError, 'stride'):
                 velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps', stride=0)
+
+    def test_stop_step_limits_frames(self):
+        types = [1, 1, 2, 2]
+        velocities = [[[float((m + 1) * (i + 1)), .5 * m, -float(i)] for i in range(4)]
+                      for m in range(5)]
+        with tempfile.TemporaryDirectory() as tmp:
+            dump = Path(tmp) / 'dump'
+            t = velocity_dump(dump, velocities, steps=[0, 10, 20, 30, 40], types=types)
+            stopped = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
+                                               stop_step=20)
+            table = stopped.tables['vacf']
+            np.testing.assert_allclose(table['lag_ps'].to_numpy(), [0, .01, .02])
+            self.assertEqual(stopped.summary['selected_steps'], [0, 20])
+            self.assertEqual(stopped.summary['selected_frames'], 3)
+            np.testing.assert_array_equal(table['origin_atom_pairs_0'].to_numpy(), [12, 8, 4])
+            expected = explicit_vacf(frames_of(t)[3][:3], 'multiple')
+            np.testing.assert_allclose(table['VACF_0_A2_ps2'].to_numpy(), expected.sum(axis=1))
+            windowed = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
+                                                start_step=10, stop_step=30)
+            self.assertEqual(windowed.summary['selected_steps'], [10, 30])
+            self.assertEqual(stopped.summary['source_dump'], str(dump.resolve()))
+            message = "Custom-only VACF options for lammps method: ['stop_step']"
+            with self.assertRaisesRegex(ValueError, re.escape(message)):
+                syutyu.vacf('missing.vacf', method='lammps', dt_ps=.001, velocity_unit='A/ps',
+                            origin_step=0, stop_step=20)
 
     def test_max_lag_is_inclusive_and_rejects_out_of_range(self):
         velocities = [[[1, 0, 0]], [[0, 2, 0]], [[-1, 1, 0]], [[2, 0, 1]], [[0, -1, 3]]]

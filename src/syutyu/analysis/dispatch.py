@@ -101,7 +101,7 @@ def vacf(source, *, method, dt_ps, velocity_unit, origin_mode=None, origin_step=
         velocity_unit (str): ``A/fs`` か ``A/ps``。``A/fs`` は二乗する前に ``A/ps`` へ換算する。
         origin_mode (str | None): ``multiple`` （Colab の定義）か ``single`` （フレーム0のみ）。``lammps`` は単一原点のみ。
         origin_step (int | None): ``lammps`` では必須。``custom`` では指定できない。
-        **options: ``custom`` では ``selections`` （既定 ``['all']``）、``start_step``、``stride``、``max_lag_ps``。``lammps`` では ``max_lag_ps``。
+        **options: ``custom`` では ``selections`` （既定 ``['all']``）、``start_step``、``stop_step``、``stride``、``max_lag_ps``。``lammps`` では ``max_lag_ps``。
 
     Returns:
         Result: ``tables['vacf']`` に ``lag_ps``、成分 ``VACF_<i>_x_A2_ps2`` など、``VACF_<i>_A2_ps2``、``VACF_<i>_normalized``、``origin_atom_pairs_<i>``。
