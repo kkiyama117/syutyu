@@ -34,7 +34,7 @@ uv run --locked tools/docs/api_reference.py --check
 | [`fit_diffusion`](#fit_diffusion) | 関数 | 指定した時間窓で MSD を直線近似し、拡散係数を返す。 |
 | [`summarize_thermo`](#summarize_thermo) | 関数 | thermo の区間について、平均・標準偏差・点数を返す。 |
 | [`radial_distribution`](#radial_distribution) | 関数 | 中心と隣接の組ごとに、フレーム平均の RDF と積算配位数を返す。 |
-| [`mean_squared_displacement`](#mean_squared_displacement) | 関数 | 選択ごとに原子 MSD を計算する。拡散フィットや重心除去は行わない。 |
+| [`mean_squared_displacement`](#mean_squared_displacement) | 関数 | 選択ごとに原子 MSD を計算する。拡散フィットは行わない。 |
 | [`velocity_autocorrelation`](#velocity_autocorrelation) | 関数 | 選択ごとに速度自己相関を計算する。複数時間原点が Colab の定義。 |
 | [`run_lammps`](#run_lammps) | 関数 | 入力と明示した補助ファイルを新しいディレクトリへ写し、実行してそのパスを返す。 |
 | [`save_figure`](#save_figure) | 関数 | Result を PNG に描いて保存する。 |
@@ -497,7 +497,7 @@ msd(source, *, method, dt_ps, origin_mode=None, origin_step=None, **options)
 - `dt_ps` — LAMMPS の 1 step 当たりの ps。
 - `origin_mode` — `multiple`（全開始時刻を平均）か `single`（最初のフレームを原点）。`lammps` は単一原点のみ。
 - `origin_step` — `lammps` では必須。`custom` では指定できない。
-- `options` — `custom` では `selections`（既定 `['all']`）、`start_step`、`stop_step`、`stride`、`laboratory`。`lammps` では `column`。
+- `options` — `custom` では `selections`（既定 `['all']`）、`start_step`、`stop_step`、`stride`、`laboratory`、`com_masses`。`lammps` では `column`。
 
 **戻り値**
 
@@ -685,10 +685,10 @@ radial_distribution(trajectory, pairs, *, rmax, bins=200, start_step=None, stop_
 ### mean_squared_displacement
 
 ```python
-mean_squared_displacement(trajectory, selections, *, dt_ps, start_step=None, stop_step=None, stride=1, laboratory=False, origin_mode='multiple')
+mean_squared_displacement(trajectory, selections, *, dt_ps, start_step=None, stop_step=None, stride=1, laboratory=False, origin_mode='multiple', com_masses=None)
 ```
 
-選択ごとに原子 MSD を計算する。拡散フィットや重心除去は行わない。
+選択ごとに原子 MSD を計算する。拡散フィットは行わない。
 
 `from syutyu.analysis.msd import mean_squared_displacement`
 
@@ -700,14 +700,16 @@ mean_squared_displacement(trajectory, selections, *, dt_ps, start_step=None, sto
 - `start_step`、`stop_step`、`stride` — 使うフレームの範囲と間引き。等間隔であること。
 - `laboratory` — 可変セルで、セル伸縮を含む実験室座標の MSD を明示的に求める。
 - `origin_mode` — `multiple`（全開始時刻）か `single`（最初の選択フレーム）。
+- `com_masses` — dump の type ラベル → 質量 g/mol。与えると全原子の質量重み付き重心の変位を各原子から引く。選択ごとの重心は引かない。
 
 **戻り値**
 
-`Result`。`tables['msd']` に `lag_ps`、`MSD_<i>_A2`、`origin_atom_pairs_<i>`。
+`Result`。`tables['msd']` に `lag_ps`、`MSD_<i>_A2`、`origin_atom_pairs_<i>`。`summary` に `com_drift_removed`。除去したときは `com_masses` と `com_max_displacement_A`（Å）も入る。
 
 **例外**
 
 - `ValueError` — `dt_ps` が正でない、原点モードが不正、フレームが2未満か等間隔でない、選択が空、可変セルなのに非折り返し座標と `laboratory=True` がそろわない。
+- `ValueError` — `com_masses` がマッピングでない、type 列がない、使われている type の質量がない、質量が有限の正の数でない、`laboratory=True` と同時に与えた。
 
 **注意**
 

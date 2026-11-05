@@ -72,7 +72,7 @@ uv run --locked syutyu vacf trajectory.lammpstrj --method custom \
 
 `dt_ps`は1 LAMMPS step当たりのpsであり、dump間隔ではない。原子ID、セル、座標形式、速度の単位を明記する。直交・3方向周期セルのみを扱い、反応でIDやtypeが変わる系、傾斜セル等は受け付けない。距離はÅ、MSDはÅ²を前提とし、units ljの換算は行わない。
 
-MSDはxu/yu/zu・image flagsを優先する。固定セルのwrapped座標だけなら、真の隣接フレーム変位の各成分がL/2未満という仮定でunwrapする。可変セルには明示unwrapped情報とlaboratory=Trueが必要で、その値はセル伸縮を含む実験室座標のMSDである。分子重心MSDや自動ドリフト補正は行わない。
+MSDはxu/yu/zu・image flagsを優先する。固定セルのwrapped座標だけなら、真の隣接フレーム変位の各成分がL/2未満という仮定でunwrapする。可変セルには明示unwrapped情報とlaboratory=Trueが必要で、その値はセル伸縮を含む実験室座標のMSDである。分子重心MSDは計算しない。系全体の重心ドリフトは、APIで `com_masses` を与えたときだけ引く（CLIにはない）。
 
 ## native表の段階的な読込
 

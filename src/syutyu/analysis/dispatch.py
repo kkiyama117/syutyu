@@ -57,7 +57,7 @@ def msd(source, *, method, dt_ps, origin_mode=None, origin_step=None, **options)
         - `dt_ps` — LAMMPS の 1 step 当たりの ps。
         - `origin_mode` — `multiple`（全開始時刻を平均）か `single`（最初のフレームを原点）。`lammps` は単一原点のみ。
         - `origin_step` — `lammps` では必須。`custom` では指定できない。
-        - `options` — `custom` では `selections`（既定 `['all']`）、`start_step`、`stop_step`、`stride`、`laboratory`。`lammps` では `column`。
+        - `options` — `custom` では `selections`（既定 `['all']`）、`start_step`、`stop_step`、`stride`、`laboratory`、`com_masses`。`lammps` では `column`。
     戻り値:
         `Result`。`tables['msd']` に `lag_ps`、`MSD_<i>_A2`、`origin_atom_pairs_<i>`。
     例外:

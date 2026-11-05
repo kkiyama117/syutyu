@@ -92,6 +92,68 @@ class StructureTests(unittest.TestCase):
             result = mean_squared_displacement(t, ['all'], dt_ps=.1)
             self.assertEqual(result.tables['msd']['MSD_0_A2'][1], 256)
 
+    def test_com_drift_removed_for_uniform_translation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            t = read_trajectory(write_dump(Path(tmp) / 'dump', 'id type xu yu zu',
+                                           [['1 1 0 0 0', '2 2 1 0 0'],
+                                            ['1 1 1 0 0', '2 2 2 0 0'],
+                                            ['1 1 2 0 0', '2 2 3 0 0']]))
+            removed = mean_squared_displacement(t, ['all'], dt_ps=.1,
+                                                com_masses={'1': 1.0, '2': 3.0})
+            np.testing.assert_array_equal(removed.tables['msd']['MSD_0_A2'], [0, 0, 0])
+            self.assertEqual(removed.summary['com_max_displacement_A'], 2.0)
+            self.assertTrue(removed.summary['com_drift_removed'])
+            plain = mean_squared_displacement(t, ['all'], dt_ps=.1)
+            np.testing.assert_array_equal(plain.tables['msd']['MSD_0_A2'], [0, 1, 4])
+            self.assertFalse(plain.summary['com_drift_removed'])
+
+    def test_com_is_mass_weighted_over_all_atoms(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            t = read_trajectory(write_dump(Path(tmp) / 'dump', 'id type xu yu zu',
+                                           [['1 1 0 0 0', '2 2 5 0 0'],
+                                            ['1 1 3 0 0', '2 2 5 0 0']]))
+            result = mean_squared_displacement(t, ['type:1', 'type:2'], dt_ps=.1,
+                                               com_masses={'1': 1.0, '2': 3.0})
+            np.testing.assert_array_equal(result.tables['msd']['MSD_0_A2'], [0, 2.25**2])
+            np.testing.assert_array_equal(result.tables['msd']['MSD_1_A2'], [0, .75**2])
+
+    def test_com_masses_errors(self):
+        typed = [['1 1 0 0 0', '2 2 1 0 0'], ['1 1 1 0 0', '2 2 1 0 0']]
+        plain = [['1 0 0 0', '2 1 0 0'], ['1 1 0 0', '2 1 0 0']]
+        rows = [
+            ('id xu yu zu', plain, {'1': 1.0}, False,
+             'com_masses needs a type column in the dump'),
+            ('id type xu yu zu', typed, {'1': 1.0}, False,
+             "com_masses has no mass for types: ['2']"),
+            ('id type xu yu zu', typed, {'1': 1.0, '2': 0}, False,
+             'com_masses: mass of type 2 must be finite and > 0'),
+            ('id type xu yu zu', typed, {'1': float('nan'), '2': 1.0}, False,
+             'com_masses: mass of type 1 must be finite and > 0'),
+            ('id type xu yu zu', typed, {'1': 1.0, '2': 1.0}, True,
+             'com_masses cannot be combined with laboratory=True'),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            for number, (columns, frames, com_masses, laboratory, message) in enumerate(rows):
+                with self.subTest(row=number):
+                    t = read_trajectory(write_dump(Path(tmp) / f'dump-{number}', columns, frames))
+                    with self.assertRaises(ValueError) as caught:
+                        mean_squared_displacement(t, ['all'], dt_ps=.1,
+                                                  com_masses=com_masses, laboratory=laboratory)
+                    self.assertEqual(str(caught.exception), message)
+
+    def test_com_masses_default_is_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            t = read_trajectory(write_dump(Path(tmp) / 'dump', 'id type xu yu zu',
+                                           [['1 1 0 0 0', '2 2 1 0 0'],
+                                            ['1 1 1 0 0', '2 2 1 0 0']]))
+            omitted = mean_squared_displacement(t, ['all'], dt_ps=.1)
+            explicit = mean_squared_displacement(t, ['all'], dt_ps=.1, com_masses=None)
+            for column in omitted.tables['msd']:
+                np.testing.assert_array_equal(explicit.tables['msd'][column],
+                                              omitted.tables['msd'][column])
+            self.assertIs(omitted.summary['com_drift_removed'], False)
+            self.assertIs(explicit.summary['com_drift_removed'], False)
+
     def test_native_msd_tables(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'Na.msd'

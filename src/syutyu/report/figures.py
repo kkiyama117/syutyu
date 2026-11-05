@@ -105,7 +105,13 @@ def draw_view(ax, result, view=None, compare=True):
         if compare:
             ax.axhline(0, color='grey', ls=':', label='MSD = 0')
         ax.set(xlabel='Lag time (ps)', ylabel='MSD (Å²)', title='Atomic mean squared displacement')
-        hint = f'Unwrapping: {s.get("unwrap_source", "minimum-image increments (conditional)")}.\nAtomic MSD, not molecular COM; inspect origin/averaging settings before diffusion fits.'
+        if s.get('com_drift_removed'):
+            note = ('Atomic MSD with system COM drift removed, not molecular COM; '
+                    'inspect origin/averaging settings before diffusion fits.')
+        else:
+            note = ('Atomic MSD, not molecular COM; '
+                    'inspect origin/averaging settings before diffusion fits.')
+        hint = f'Unwrapping: {s.get("unwrap_source", "minimum-image increments (conditional)")}.\n{note}'
     elif view in ('vacf', 'vacf-normalized'):
         data = result.tables['vacf']
         normalized = view == 'vacf-normalized'
