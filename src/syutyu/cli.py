@@ -4,8 +4,6 @@ import json
 from pathlib import Path
 import subprocess
 
-import polars as pl
-
 
 def make_parser():
     parser = argparse.ArgumentParser(prog='syutyu', description='MD tools: generic LAMMPS runs, partial RDF, atomic MSD, plots and VMD export.')
@@ -120,11 +118,11 @@ def main(argv=None):
         elif args.command == 'thermo':
             from .io.thermo import read_thermo
             table = read_thermo(args.log, block=args.block, dt_ps=args.dt_ps)
-            result = Result({'thermo': pl.DataFrame(table)},
+            result = Result({'thermo': table},
                             {'kind': 'thermo', 'title': 'LAMMPS thermodynamic log',
                              'block': args.block, 'dt_ps': args.dt_ps})
             save_result(result, args.output, overwrite=args.overwrite)
-            print(json.dumps({'results': str(args.output.resolve()), 'records': len(table['time_ps'])}))
+            print(json.dumps({'results': str(args.output.resolve()), 'records': table.height}))
         elif args.command == 'plot':
             from .report.figures import save_figure
             save_figure(load_result(args.results), args.output, args.view, not args.no_compare,

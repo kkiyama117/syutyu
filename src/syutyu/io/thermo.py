@@ -3,16 +3,17 @@
 from pathlib import Path
 
 import numpy as np
+import polars as pl
 
 
-def read_thermo_blocks(path) -> list[dict[str, np.ndarray]]:
+def read_thermo_blocks(path) -> list[pl.DataFrame]:
     """``Step`` で始まり ``Loop time`` で終わる表を、ブロックごとに分けて読む。
 
     Args:
         path (str | os.PathLike): LAMMPS の log または screen 出力。
 
     Returns:
-        list[dict[str, numpy.ndarray]]: ブロックごとの辞書（列名→numpy 配列）のリスト。列名と step はブロック間で違ってよい。
+        list[polars.DataFrame]: ブロックごとの表。列は見出しの順、すべて Float64。列名と step はブロック間で違ってよい。
 
     Raises:
         ValueError: 列名の重複、列数や数値の不一致、``Loop time`` のない未完了ブロック。
@@ -36,7 +37,7 @@ def read_thermo_blocks(path) -> list[dict[str, np.ndarray]]:
                 headers, rows = fields, []
             elif headers is not None and line.lstrip().startswith('Loop time'):
                 values = np.asarray(rows, dtype=float).reshape((-1, len(headers)))
-                blocks.append({name: values[:, index].copy() for index, name in enumerate(headers)})
+                blocks.append(pl.DataFrame(values, schema=headers, orient='row'))
                 headers = None
             elif headers is not None:
                 try:
@@ -54,7 +55,7 @@ def read_thermo_blocks(path) -> list[dict[str, np.ndarray]]:
     return blocks
 
 
-def read_thermo(path, *, block=-1, dt_ps) -> dict[str, np.ndarray]:
+def read_thermo(path, *, block=-1, dt_ps) -> pl.DataFrame:
     """1つの thermo ブロックを選び、``time_ps`` を加えて返す。
 
     Args:
@@ -63,7 +64,7 @@ def read_thermo(path, *, block=-1, dt_ps) -> dict[str, np.ndarray]:
         dt_ps (float): LAMMPS の 1 step 当たりの ps。``timestep`` コマンドの値そのものではない。
 
     Returns:
-        dict[str, numpy.ndarray]: 列名→numpy 配列の辞書。``time_ps = Step * dt_ps`` を加える。
+        polars.DataFrame: 先頭に ``time_ps``、続いてブロックの列。``time_ps = Step * dt_ps``。
 
     Raises:
         ValueError: ``dt_ps`` が正でない、ブロックがない、選択ブロックが空・非有限・step が増加しない、``time_ps`` 列と衝突する。
@@ -82,16 +83,17 @@ def read_thermo(path, *, block=-1, dt_ps) -> dict[str, np.ndarray]:
     if not -len(blocks) <= block < len(blocks):
         raise IndexError(f'Thermo block {block} out of range for {len(blocks)} blocks')
     table = blocks[block]
-    if not len(table['Step']):
+    if not table.height:
         raise ValueError('Selected thermo block is empty')
-    if any(not np.isfinite(values).all() for values in table.values()):
+    if not all(np.isfinite(values.to_numpy()).all() for values in table.iter_columns()):
         raise ValueError('Selected thermo block contains non-finite data')
-    if not np.all(np.diff(table['Step']) > 0):
+    steps = table['Step'].to_numpy()
+    if not np.all(np.diff(steps) > 0):
         raise ValueError('Selected thermo steps must be strictly ascending')
-    if 'time_ps' in table:
+    if 'time_ps' in table.columns:
         raise ValueError('Thermo column time_ps conflicts with the derived time column')
     with np.errstate(over='ignore', invalid='ignore'):
-        time_ps = table['Step'] * dt_ps
+        time_ps = steps * dt_ps
     if not np.isfinite(time_ps).all():
         raise ValueError('Derived time_ps contains non-finite data')
-    return {'time_ps': time_ps, **table}
+    return pl.DataFrame({'time_ps': time_ps}).hstack(table)

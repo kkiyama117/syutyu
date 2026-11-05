@@ -93,10 +93,11 @@ class PostprocessingTests(unittest.TestCase):
                         'Step Temp Density\n300 94 1.3\n400 96 1.4\n500 95 1.5\nLoop time of 1\n')
         table = read_thermo(path, block=-1, dt_ps=.01)
         stats = summarize_thermo(table, start_ps=4, stop_ps=5)
-        self.assertEqual(stats['Temp']['mean'], 95.5)
-        self.assertAlmostEqual(stats['Density']['mean'], 1.45)
-        self.assertEqual(stats['Density']['samples'], 2)
-        self.assertAlmostEqual(stats['Density']['std'], .05)
+        rows = {row['column']: row for row in stats.iter_rows(named=True)}
+        self.assertEqual(rows['Temp']['mean'], 95.5)
+        self.assertAlmostEqual(rows['Density']['mean'], 1.45)
+        self.assertEqual(rows['Density']['samples'], 2)
+        self.assertAlmostEqual(rows['Density']['std'], .05)
         with self.assertRaises(ValueError):
             summarize_thermo(table, start_ps=10)
 
