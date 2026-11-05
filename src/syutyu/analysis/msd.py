@@ -5,7 +5,7 @@ from collections.abc import Mapping
 import numpy as np
 
 from ..io.dump import frame_indices
-from ..io.store import Result
+from ..io.store import Result, _frame
 from ..kernels import msd_multi_origin, unwrap
 
 
@@ -128,4 +128,4 @@ def mean_squared_displacement(trajectory, selections, *, dt_ps, start_step=None,
         limitations[0] = ('Atomic MSD, not molecular center-of-mass MSD; '
                           'mass-weighted system COM drift removed')
     summary['limitations'] = limitations
-    return Result({'msd': table}, summary)
+    return Result({'msd': _frame(table)}, summary)

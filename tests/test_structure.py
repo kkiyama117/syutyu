@@ -37,8 +37,8 @@ class StructureTests(unittest.TestCase):
             result = radial_distribution(t, [('type:1', 'type:2')], rmax=1, bins=2,
                                          normalization='population')
             shell = 4*np.pi/3*.5**3
-            self.assertAlmostEqual(result.tables['rdf']['g_0'][0], (1000+1728)/2/shell)
-            np.testing.assert_allclose(result.tables['rdf']['CN_0'], [1, 1])
+            self.assertAlmostEqual(result.tables['rdf']['g_0'].to_numpy()[0], (1000+1728)/2/shell)
+            np.testing.assert_allclose(result.tables['rdf']['CN_0'].to_numpy(), [1, 1])
             with self.assertRaisesRegex(ValueError, 'Variable-cell'):
                 mean_squared_displacement(t, ['type:1'], dt_ps=.001)
 
@@ -50,8 +50,8 @@ class StructureTests(unittest.TestCase):
                                          normalization='population')
             expected, cn, _ = pair_rdf(t.positions, t.boxes[0], np.linspace(0, 4, 9),
                                        normalization='population')
-            np.testing.assert_allclose(result.tables['rdf']['g_0'], expected)
-            np.testing.assert_allclose(result.tables['rdf']['CN_0'], cn)
+            np.testing.assert_allclose(result.tables['rdf']['g_0'].to_numpy(), expected)
+            np.testing.assert_allclose(result.tables['rdf']['CN_0'].to_numpy(), cn)
 
     def test_intermolecular_exclusion(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -59,11 +59,11 @@ class StructureTests(unittest.TestCase):
                                            [['1 1 1 1 0 0', '2 2 1 2 0 0']]))
             result = radial_distribution(t, [('type:1', 'type:2')], rmax=3, bins=3,
                                          intermolecular=True, normalization='population')
-            self.assertTrue((result.tables['rdf']['CN_0'] == 0).all())
+            self.assertTrue((result.tables['rdf']['CN_0'].to_numpy() == 0).all())
             t.labels['mol'][:] = '0'
             result = radial_distribution(t, [('type:1', 'type:2')], rmax=3, bins=3,
                                          intermolecular=True, normalization='population')
-            self.assertEqual(result.tables['rdf']['CN_0'][-1], 1)
+            self.assertEqual(result.tables['rdf']['CN_0'].to_numpy()[-1], 1)
 
     def test_scaled_coordinates_and_image_flags(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -71,8 +71,8 @@ class StructureTests(unittest.TestCase):
                 Path(tmp) / 'dump', 'id type xs ys zs ix iy iz',
                 [['1 1 .9 0 0 0 0 0'], ['1 1 .1 0 0 1 0 0'], ['1 1 .3 0 0 1 0 0']]))
             result = mean_squared_displacement(t, ['all'], dt_ps=.1)
-            np.testing.assert_allclose(result.tables['msd']['lag_ps'], [0, 1, 2])
-            np.testing.assert_allclose(result.tables['msd']['MSD_0_A2'], [0, 4, 16])
+            np.testing.assert_allclose(result.tables['msd']['lag_ps'].to_numpy(), [0, 1, 2])
+            np.testing.assert_allclose(result.tables['msd']['MSD_0_A2'].to_numpy(), [0, 4, 16])
 
     def test_npt_explicit_unwrapped_requires_lab_opt_in(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -82,7 +82,7 @@ class StructureTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'laboratory'):
                 mean_squared_displacement(t, ['type:1'], dt_ps=.1)
             result = mean_squared_displacement(t, ['type:1'], dt_ps=.1, laboratory=True)
-            np.testing.assert_allclose(result.tables['msd']['MSD_0_A2'], [0, 9])
+            np.testing.assert_allclose(result.tables['msd']['MSD_0_A2'].to_numpy(), [0, 9])
             self.assertIn('laboratory', result.summary['coordinate_frame'])
 
     def test_explicit_unwrapped_preferred_over_wrapped(self):
@@ -90,7 +90,7 @@ class StructureTests(unittest.TestCase):
             t = read_trajectory(write_dump(Path(tmp) / 'dump', 'id type x y z xu yu zu',
                                            [['1 1 1 0 0 1 0 0'], ['1 1 7 0 0 17 0 0']]))
             result = mean_squared_displacement(t, ['all'], dt_ps=.1)
-            self.assertEqual(result.tables['msd']['MSD_0_A2'][1], 256)
+            self.assertEqual(result.tables['msd']['MSD_0_A2'].to_numpy()[1], 256)
 
     def test_com_drift_removed_for_uniform_translation(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -100,11 +100,11 @@ class StructureTests(unittest.TestCase):
                                             ['1 1 2 0 0', '2 2 3 0 0']]))
             removed = mean_squared_displacement(t, ['all'], dt_ps=.1,
                                                 com_masses={'1': 1.0, '2': 3.0})
-            np.testing.assert_array_equal(removed.tables['msd']['MSD_0_A2'], [0, 0, 0])
+            np.testing.assert_array_equal(removed.tables['msd']['MSD_0_A2'].to_numpy(), [0, 0, 0])
             self.assertEqual(removed.summary['com_max_displacement_A'], 2.0)
             self.assertTrue(removed.summary['com_drift_removed'])
             plain = mean_squared_displacement(t, ['all'], dt_ps=.1)
-            np.testing.assert_array_equal(plain.tables['msd']['MSD_0_A2'], [0, 1, 4])
+            np.testing.assert_array_equal(plain.tables['msd']['MSD_0_A2'].to_numpy(), [0, 1, 4])
             self.assertFalse(plain.summary['com_drift_removed'])
 
     def test_com_is_mass_weighted_over_all_atoms(self):
@@ -114,8 +114,8 @@ class StructureTests(unittest.TestCase):
                                             ['1 1 3 0 0', '2 2 5 0 0']]))
             result = mean_squared_displacement(t, ['type:1', 'type:2'], dt_ps=.1,
                                                com_masses={'1': 1.0, '2': 3.0})
-            np.testing.assert_array_equal(result.tables['msd']['MSD_0_A2'], [0, 2.25**2])
-            np.testing.assert_array_equal(result.tables['msd']['MSD_1_A2'], [0, .75**2])
+            np.testing.assert_array_equal(result.tables['msd']['MSD_0_A2'].to_numpy(), [0, 2.25**2])
+            np.testing.assert_array_equal(result.tables['msd']['MSD_1_A2'].to_numpy(), [0, .75**2])
 
     def test_com_masses_errors(self):
         typed = [['1 1 0 0 0', '2 2 1 0 0'], ['1 1 1 0 0', '2 2 1 0 0']]
@@ -148,9 +148,9 @@ class StructureTests(unittest.TestCase):
                                             ['1 1 1 0 0', '2 2 1 0 0']]))
             omitted = mean_squared_displacement(t, ['all'], dt_ps=.1)
             explicit = mean_squared_displacement(t, ['all'], dt_ps=.1, com_masses=None)
-            for column in omitted.tables['msd']:
-                np.testing.assert_array_equal(explicit.tables['msd'][column],
-                                              omitted.tables['msd'][column])
+            for column in omitted.tables['msd'].columns:
+                np.testing.assert_array_equal(explicit.tables['msd'][column].to_numpy(),
+                                              omitted.tables['msd'][column].to_numpy())
             self.assertIs(omitted.summary['com_drift_removed'], False)
             self.assertIs(explicit.summary['com_drift_removed'], False)
 
@@ -159,8 +159,8 @@ class StructureTests(unittest.TestCase):
             path = Path(tmp) / 'Na.msd'
             path.write_text('# TimeStep msd\n0 0\n5 2\n10 4\n')
             result = read_msd({'Na': path}, dt_ps=.001, origin_step=0)
-            np.testing.assert_allclose(result.tables['msd']['lag_ps'], [0, .005, .01])
-            np.testing.assert_allclose(result.tables['msd']['MSD_0_A2'], [0, 2, 4])
+            np.testing.assert_allclose(result.tables['msd']['lag_ps'].to_numpy(), [0, .005, .01])
+            np.testing.assert_allclose(result.tables['msd']['MSD_0_A2'].to_numpy(), [0, 2, 4])
             self.assertEqual(make_figure(result).axes[0].lines[0].get_label(), 'Na')
             with self.assertRaises(ValueError):
                 read_msd({'Na': path}, dt_ps=.001, origin_step=0, column=0)

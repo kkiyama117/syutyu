@@ -26,14 +26,15 @@ class PostprocessingTests(unittest.TestCase):
                              '500 2\n1 0.025 0 0\n2 0.075 4 3\n')
         result = read_rdf(path, pairs=[('Ar', 'Ar')])
         table = result.tables['rdf']
-        np.testing.assert_allclose(table['r_upper_A'], [.05, .10])
-        np.testing.assert_allclose(table['g_0'], [0, 3])
-        np.testing.assert_allclose(table['CN_0'], [0, 2])
+        np.testing.assert_allclose(table['r_upper_A'].to_numpy(), [.05, .10])
+        np.testing.assert_allclose(table['g_0'].to_numpy(), [0, 3])
+        np.testing.assert_allclose(table['CN_0'].to_numpy(), [0, 2])
         self.assertEqual(result.summary['block_steps'], [400, 500])
         selected = read_rdf(path, start_step=500)
-        np.testing.assert_allclose(selected.tables['rdf']['g_0'], [0, 4])
+        np.testing.assert_allclose(selected.tables['rdf']['g_0'].to_numpy(), [0, 4])
         save_result(result, self.root / 'result')
-        np.testing.assert_allclose(load_result(self.root / 'result').tables['rdf']['g_0'], [0, 3])
+        loaded = load_result(self.root / 'result')
+        np.testing.assert_allclose(loaded.tables['rdf']['g_0'].to_numpy(), [0, 3])
         save_figure(result, self.root / 'rdf.png')
         save_figure(result, self.root / 'cn.png', view='cn')
         self.assertGreater((self.root / 'rdf.png').stat().st_size, 1000)
@@ -42,7 +43,7 @@ class PostprocessingTests(unittest.TestCase):
         path = self.rdf_file('100 1\n1 0.5 1 2 3 4\n')
         result = read_rdf(path, pairs=[('Na', 'Na'), ('Na', 'Cl')])
         self.assertEqual(result.summary['rdf_pairs'][1]['neighbor'], 'Cl')
-        np.testing.assert_allclose(result.tables['rdf']['g_1'], [3])
+        np.testing.assert_allclose(result.tables['rdf']['g_1'].to_numpy(), [3])
         with self.assertRaises(ValueError):
             read_rdf(path, pairs=[('Ar', 'Ar')])
 
@@ -62,8 +63,9 @@ class PostprocessingTests(unittest.TestCase):
         path = self.root / 'Ar.msd'
         path.write_text('# LAMMPS compute msd\n400 .4 .4 .4 1.2\n500 .8 .8 .8 2.4\n600 1.2 1.2 1.2 3.6\n')
         result = read_msd({'Ar': path}, dt_ps=.01, origin_step=300)
-        np.testing.assert_allclose(result.tables['msd']['lag_ps'], [1, 2, 3])
-        fit = fit_diffusion(result.tables['msd']['lag_ps'], result.tables['msd']['MSD_0_A2'], window_ps=(1, 3))
+        table = result.tables['msd']
+        np.testing.assert_allclose(table['lag_ps'].to_numpy(), [1, 2, 3])
+        fit = fit_diffusion(table['lag_ps'].to_numpy(), table['MSD_0_A2'].to_numpy(), window_ps=(1, 3))
         self.assertAlmostEqual(fit.D_m2_s, 2e-9)
         with self.assertRaises(TypeError):
             read_msd({'Ar': path}, dt_ps=.01)

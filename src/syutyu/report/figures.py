@@ -1,7 +1,6 @@
 """Result の表を共通に描く。pyplot を import しない headless 描画。
 """
 from pathlib import Path
-import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
@@ -137,7 +136,7 @@ def draw_view(ax, result, view=None, compare=True):
             if 'target_temperature_K' in s:
                 ax.axhline(s['target_temperature_K'], ls='--', label=f'Target {s["target_temperature_K"]:g} K')
             else:
-                ax.axhline(np.mean(data['Temp']), ls=':', label='Sample mean (not target)')
+                ax.axhline(data['Temp'].mean(), ls=':', label='Sample mean (not target)')
         ax.set(xlabel='Time within selected thermo block (ps)', ylabel='Temperature (K)', title='Temperature history')
         hint = 'Time from explicit timestep; blocks separated at each thermo header.\nTemperature control alone does not establish equilibrium.'
     ax.grid(alpha=.18)

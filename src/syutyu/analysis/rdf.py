@@ -3,7 +3,7 @@
 import numpy as np
 
 from ..io.dump import frame_indices
-from ..io.store import Result
+from ..io.store import Result, _frame
 from ..kernels import minimum_image
 
 
@@ -80,7 +80,7 @@ def radial_distribution(trajectory, pairs, *, rmax, bins=200, start_step=None, s
         table[f'ordered_counts_{pair_index}'] = counts
         pair_info.append({'center': center, 'neighbor': neighbor, 'g': g_key, 'cn': cn_key,
                           'centers': len(a), 'neighbors': len(b)})
-    return Result({'rdf': table}, {
+    return Result({'rdf': _frame(table)}, {
         'kind': 'rdf', 'title': 'Partial radial distribution', 'atoms': len(trajectory.ids),
         'source_dump': trajectory.source_path,
         'selected_frames': len(frames), 'selected_steps': [int(trajectory.steps[frames[0]]), int(trajectory.steps[frames[-1]])],

@@ -101,4 +101,4 @@ uv run --locked syutyu export-vmd trajectory.lammpstrj --output exports/vmd.zip
 
 描画はRDF/CN/MSD/VACF/規格化VACF/温度。通常の結果・PNGの上書きにはoverwriteを明示し、配布ZIPは既存名へ上書きしない。
 
-保存形式はschema3のResult（CSV tables + JSON summary）。方法、単位、原点、選択、限界を記録する。読込とMSDは軌跡をメモリに載せるため、大規模系のストリーミング処理ではない。原子MSDであり、粘性・熱伝導率・分子重心・傾斜セル等を対応済みとは扱わない。
+保存形式はschema3のResult（表ごとの polars DataFrame を CSV に、summary を JSON に保存）。方法、単位、原点、選択、限界を記録する。読込とMSDは軌跡をメモリに載せるため、大規模系のストリーミング処理ではない。原子MSDであり、粘性・熱伝導率・分子重心・傾斜セル等を対応済みとは扱わない。

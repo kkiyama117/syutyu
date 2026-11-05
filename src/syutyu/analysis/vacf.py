@@ -3,7 +3,7 @@
 import numpy as np
 
 from ..io.dump import frame_indices
-from ..io.store import Result
+from ..io.store import Result, _frame
 
 
 def _correlations(velocities, lags, origin_mode):
@@ -105,7 +105,7 @@ def velocity_autocorrelation(trajectory, selections, *, dt_ps, velocity_unit,
                    '(equal-mass COM proxy only)']
     if origin_mode == 'single':
         limitations.insert(0, 'Single origin (frame 0) only; not the Colab multiple-origin average')
-    return Result({'vacf': table}, {
+    return Result({'vacf': _frame(table)}, {
         'kind': 'vacf', 'title': 'Velocity autocorrelation function', 'method': 'custom',
         'origin_mode': origin_mode, 'velocity_unit_input': velocity_unit,
         'velocity_unit_output': 'A/ps', 'dt_ps': dt_ps, 'frame_interval_ps': frame_interval_ps,

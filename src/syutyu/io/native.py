@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .store import Result
+from .store import Result, _frame
 
 
 def read_rdf(path, *, pairs=None, start_step=None, stop_step=None):
@@ -88,7 +88,7 @@ def read_rdf(path, *, pairs=None, start_step=None, stop_step=None):
         g, cn = f'g_{index}', f'CN_{index}'
         table[g], table[cn] = average[:, 2 * index], average[:, 2 * index + 1]
         info.append({'center': center, 'neighbor': neighbor, 'g': g, 'cn': cn})
-    return Result({'rdf': table}, {
+    return Result({'rdf': _frame(table)}, {
         'kind': 'rdf', 'title': 'LAMMPS computed RDF', 'source_rdf': str(path.resolve()),
         'rdf_pairs': info, 'bin_width_A': float(width), 'selected_blocks': len(selected),
         'block_steps': [step for step, _ in selected],
@@ -137,7 +137,7 @@ def read_msd(files, *, dt_ps, origin_step, column=-1):
         key = f'MSD_{index}_A2'
         table[key] = values[:, column]
         groups.append({'selection': name, 'column': key, 'source_name': Path(path).name})
-    return Result({'msd': table}, {
+    return Result({'msd': _frame(table)}, {
         'kind': 'msd', 'title': 'LAMMPS computed MSD', 'msd_selections': groups,
         'method': 'lammps', 'origin_mode': 'single',
         'dt_ps': dt_ps, 'origin_step': origin_step, 'value_column': column,
@@ -195,7 +195,7 @@ def read_vacf(path, *, dt_ps, origin_step, velocity_unit, max_lag_ps=None):
              **{f'VACF_0_{axis}_A2_ps2': correlations[:, index] for index, axis in enumerate('xyz')},
              'VACF_0_A2_ps2': correlations[:, 3],
              'VACF_0_normalized': correlations[:, 3] / correlations[0, 3]}
-    return Result({'vacf': table}, {
+    return Result({'vacf': _frame(table)}, {
         'kind': 'vacf', 'title': 'LAMMPS velocity autocorrelation', 'method': 'lammps',
         'origin_mode': 'single', 'origin_step': origin_step, 'dt_ps': dt_ps,
         'velocity_unit_input': velocity_unit, 'velocity_unit_output': 'A/ps',

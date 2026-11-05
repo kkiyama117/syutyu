@@ -36,29 +36,29 @@ class MethodChoiceTests(unittest.TestCase):
         result = rdf(t, method='custom', pairs=[('all', 'all')], rmax=4, bins=4)
         expected = np.zeros(4)
         expected[2] = 1000 / (4 * np.pi / 3 * (3**3 - 2**3))  # H=1; N(N-1)/2=1
-        np.testing.assert_allclose(result.tables['rdf']['g_0'], expected)
+        np.testing.assert_allclose(result.tables['rdf']['g_0'].to_numpy(), expected)
         population = radial_distribution(t, [('all', 'all')], rmax=4, bins=4,
                                          normalization='population')
-        np.testing.assert_allclose(expected, 2 * population.tables['rdf']['g_0'])
+        np.testing.assert_allclose(expected, 2 * population.tables['rdf']['g_0'].to_numpy())
         kernel = pair_rdf(t.positions, t.boxes[0], np.arange(5.), normalization='finite')[0]
         np.testing.assert_allclose(kernel, expected)
         self.assertEqual(result.summary['rdf_normalization'], 'finite')
         self.assertEqual(result.summary['method'], 'custom')
-        np.testing.assert_allclose(result.tables['rdf']['CN_0'], [0, 0, 1, 1])
+        np.testing.assert_allclose(result.tables['rdf']['CN_0'].to_numpy(), [0, 0, 1, 1])
 
     def test_last_radial_edge_is_excluded_as_in_colab_and_lammps(self):
         t = tiny_trajectory()
         kernel, cn, counts = pair_rdf(t.positions, t.boxes[0], np.array([0., 1., 2.]), normalization='finite')
         np.testing.assert_array_equal(counts, [0, 0])  # all pair distances equal rmax=2
         result = rdf(t, method='custom', pairs=[('all', 'all')], rmax=2, bins=2)
-        np.testing.assert_array_equal(result.tables['rdf']['g_0'], kernel)
-        np.testing.assert_array_equal(result.tables['rdf']['CN_0'], cn)
+        np.testing.assert_array_equal(result.tables['rdf']['g_0'].to_numpy(), kernel)
+        np.testing.assert_array_equal(result.tables['rdf']['CN_0'].to_numpy(), cn)
 
     def test_native_rdf_dispatch_does_not_reconstruct_coordinates(self):
         path = self.root / 'native.gr'
         path.write_text('100 2\n1 .5 0 0\n2 1.5 2 1\n')
         result = rdf(path, method='lammps')
-        np.testing.assert_allclose(result.tables['rdf']['g_0'], [0, 2])
+        np.testing.assert_allclose(result.tables['rdf']['g_0'].to_numpy(), [0, 2])
         self.assertEqual(result.summary['rdf_normalization'], 'finite')
         with self.assertRaises(ValueError):
             rdf(path, method='lammps', normalization='population')
@@ -71,8 +71,8 @@ class MethodChoiceTests(unittest.TestCase):
         t = tiny_trajectory()
         single = msd(t, method='custom', dt_ps=.1, origin_mode='single')
         multiple = msd(t, method='custom', dt_ps=.1)
-        np.testing.assert_allclose(single.tables['msd']['MSD_0_A2'], [0, 1, 9])
-        np.testing.assert_allclose(multiple.tables['msd']['MSD_0_A2'], [0, 2.5, 9])
+        np.testing.assert_allclose(single.tables['msd']['MSD_0_A2'].to_numpy(), [0, 1, 9])
+        np.testing.assert_allclose(multiple.tables['msd']['MSD_0_A2'].to_numpy(), [0, 2.5, 9])
         self.assertEqual(single.summary['origin_mode'], 'single')
         self.assertEqual(multiple.summary['origin_mode'], 'multiple')
         with self.assertRaises(ValueError):
@@ -82,7 +82,7 @@ class MethodChoiceTests(unittest.TestCase):
         path = self.root / 'native.msd'
         path.write_text('100 0 0 0 0\n110 1 0 0 1\n120 4 0 0 4\n')
         result = msd(path, method='lammps', dt_ps=.01, origin_step=100)
-        np.testing.assert_allclose(result.tables['msd']['lag_ps'], [0, .1, .2])
+        np.testing.assert_allclose(result.tables['msd']['lag_ps'].to_numpy(), [0, .1, .2])
         self.assertEqual(result.summary['origin_mode'], 'single')
         with self.assertRaises(ValueError):
             msd(path, method='lammps', dt_ps=.01)
@@ -97,9 +97,9 @@ class MethodChoiceTests(unittest.TestCase):
     def test_native_vacf_units_negative_values_and_normalization(self):
         result = vacf(self.vacf_file(), method='lammps', dt_ps=.01,
                                 origin_step=100, velocity_unit='A/fs', max_lag_ps=.1)
-        np.testing.assert_allclose(result.tables['vacf']['VACF_0_A2_ps2'], [1e6, -1e6])
-        np.testing.assert_allclose(result.tables['vacf']['VACF_0_normalized'], [1, -1])
-        np.testing.assert_allclose(result.tables['vacf']['lag_ps'], [0, .1])
+        np.testing.assert_allclose(result.tables['vacf']['VACF_0_A2_ps2'].to_numpy(), [1e6, -1e6])
+        np.testing.assert_allclose(result.tables['vacf']['VACF_0_normalized'].to_numpy(), [1, -1])
+        np.testing.assert_allclose(result.tables['vacf']['lag_ps'].to_numpy(), [0, .1])
         self.assertEqual(result.summary['origin_mode'], 'single')
         self.assertEqual(result.summary['method'], 'lammps')
         with self.assertRaises(ValueError):

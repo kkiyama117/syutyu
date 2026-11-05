@@ -50,16 +50,16 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             t = velocity_dump(Path(tmp) / 'dump', [[[1, 0, 0]], [[-1, 0, 0]]], steps=[0, 10])
             result = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps')
             table = result.tables['vacf']
-            np.testing.assert_allclose(table['lag_ps'], [0, .01])
-            np.testing.assert_allclose(table['VACF_0_x_A2_ps2'], [1, -1])
-            np.testing.assert_allclose(table['VACF_0_y_A2_ps2'], [0, 0])
-            np.testing.assert_allclose(table['VACF_0_z_A2_ps2'], [0, 0])
-            np.testing.assert_allclose(table['VACF_0_A2_ps2'], [1, -1])
-            np.testing.assert_allclose(table['VACF_0_normalized'], [1, -1])
-            np.testing.assert_array_equal(table['origin_atom_pairs_0'], [2, 1])
-            self.assertEqual(list(table), ['lag_ps', 'VACF_0_x_A2_ps2', 'VACF_0_y_A2_ps2',
-                                            'VACF_0_z_A2_ps2', 'VACF_0_A2_ps2',
-                                            'VACF_0_normalized', 'origin_atom_pairs_0'])
+            np.testing.assert_allclose(table['lag_ps'].to_numpy(), [0, .01])
+            np.testing.assert_allclose(table['VACF_0_x_A2_ps2'].to_numpy(), [1, -1])
+            np.testing.assert_allclose(table['VACF_0_y_A2_ps2'].to_numpy(), [0, 0])
+            np.testing.assert_allclose(table['VACF_0_z_A2_ps2'].to_numpy(), [0, 0])
+            np.testing.assert_allclose(table['VACF_0_A2_ps2'].to_numpy(), [1, -1])
+            np.testing.assert_allclose(table['VACF_0_normalized'].to_numpy(), [1, -1])
+            np.testing.assert_array_equal(table['origin_atom_pairs_0'].to_numpy(), [2, 1])
+            self.assertEqual(table.columns, ['lag_ps', 'VACF_0_x_A2_ps2', 'VACF_0_y_A2_ps2',
+                                             'VACF_0_z_A2_ps2', 'VACF_0_A2_ps2',
+                                             'VACF_0_normalized', 'origin_atom_pairs_0'])
             self.assertEqual(result.summary['kind'], 'vacf')
             self.assertEqual(result.summary['method'], 'custom')
             self.assertEqual(result.summary['origin_mode'], 'multiple')
@@ -86,19 +86,21 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             expected_single = explicit_vacf(t.velocities, 'single')
             table = multiple.tables['vacf']
             for axis, name in enumerate(('x', 'y', 'z')):
-                np.testing.assert_allclose(table[f'VACF_0_{name}_A2_ps2'], expected_multiple[:, axis])
-                np.testing.assert_allclose(single.tables['vacf'][f'VACF_0_{name}_A2_ps2'],
+                np.testing.assert_allclose(table[f'VACF_0_{name}_A2_ps2'].to_numpy(),
+                                           expected_multiple[:, axis])
+                np.testing.assert_allclose(single.tables['vacf'][f'VACF_0_{name}_A2_ps2'].to_numpy(),
                                            expected_single[:, axis])
-            np.testing.assert_allclose(table['VACF_0_A2_ps2'], expected_multiple.sum(axis=1))
-            np.testing.assert_allclose(single.tables['vacf']['VACF_0_A2_ps2'],
+            np.testing.assert_allclose(table['VACF_0_A2_ps2'].to_numpy(), expected_multiple.sum(axis=1))
+            np.testing.assert_allclose(single.tables['vacf']['VACF_0_A2_ps2'].to_numpy(),
                                        expected_single.sum(axis=1))
-            self.assertNotAlmostEqual(table['VACF_0_A2_ps2'][1],
-                                      single.tables['vacf']['VACF_0_A2_ps2'][1])
-            np.testing.assert_array_equal(table['origin_atom_pairs_0'], [3, 2, 1])
-            np.testing.assert_array_equal(single.tables['vacf']['origin_atom_pairs_0'], [1, 1, 1])
+            self.assertNotAlmostEqual(table['VACF_0_A2_ps2'].to_numpy()[1],
+                                      single.tables['vacf']['VACF_0_A2_ps2'].to_numpy()[1])
+            np.testing.assert_array_equal(table['origin_atom_pairs_0'].to_numpy(), [3, 2, 1])
+            np.testing.assert_array_equal(single.tables['vacf']['origin_atom_pairs_0'].to_numpy(),
+                                          [1, 1, 1])
             self.assertEqual(single.summary['origin_mode'], 'single')
             self.assertTrue(any('Single origin' in note for note in single.summary['limitations']))
-            np.testing.assert_allclose(table['VACF_0_normalized'], [1, -.5 / (7 / 3), 0])
+            np.testing.assert_allclose(table['VACF_0_normalized'].to_numpy(), [1, -.5 / (7 / 3), 0])
 
     def test_components_sum_and_no_cross_atom_correlations(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -106,11 +108,12 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                               [[[1, 0, 0], [0, 1, 0]], [[0, 1, 0], [1, 0, 0]]])
             table = velocity_autocorrelation(t, ['all'], dt_ps=.001,
                                              velocity_unit='A/ps').tables['vacf']
-            np.testing.assert_allclose(table['VACF_0_A2_ps2'], [1, 0])
-            np.testing.assert_allclose(table['VACF_0_x_A2_ps2'] + table['VACF_0_y_A2_ps2']
-                                       + table['VACF_0_z_A2_ps2'], table['VACF_0_A2_ps2'])
-            np.testing.assert_allclose(table['VACF_0_x_A2_ps2'], [.5, 0])
-            np.testing.assert_allclose(table['VACF_0_y_A2_ps2'], [.5, 0])
+            np.testing.assert_allclose(table['VACF_0_A2_ps2'].to_numpy(), [1, 0])
+            np.testing.assert_allclose(
+                table['VACF_0_x_A2_ps2'].to_numpy() + table['VACF_0_y_A2_ps2'].to_numpy()
+                + table['VACF_0_z_A2_ps2'].to_numpy(), table['VACF_0_A2_ps2'].to_numpy())
+            np.testing.assert_allclose(table['VACF_0_x_A2_ps2'].to_numpy(), [.5, 0])
+            np.testing.assert_allclose(table['VACF_0_y_A2_ps2'].to_numpy(), [.5, 0])
 
             general = velocity_dump(Path(tmp) / 'general', [
                 [[1, -2, .5], [0, 3, 1]],
@@ -122,12 +125,13 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                                               velocity_unit='A/ps').tables['vacf']
             for axis, name in enumerate(('x', 'y', 'z')):
                 np.testing.assert_allclose(result[f'VACF_0_{name}_A2_ps2'], expected[:, axis])
-            np.testing.assert_allclose(result['VACF_0_A2_ps2'], expected.sum(axis=1))
-            np.testing.assert_allclose(result['VACF_0_A2_ps2'],
-                                       result['VACF_0_x_A2_ps2'] + result['VACF_0_y_A2_ps2']
-                                       + result['VACF_0_z_A2_ps2'])
-            np.testing.assert_allclose(result['VACF_0_normalized'][0], 1)
-            np.testing.assert_allclose(result['VACF_0_A2_ps2'][0],
+            np.testing.assert_allclose(result['VACF_0_A2_ps2'].to_numpy(), expected.sum(axis=1))
+            np.testing.assert_allclose(
+                result['VACF_0_A2_ps2'].to_numpy(),
+                result['VACF_0_x_A2_ps2'].to_numpy() + result['VACF_0_y_A2_ps2'].to_numpy()
+                + result['VACF_0_z_A2_ps2'].to_numpy())
+            np.testing.assert_allclose(result['VACF_0_normalized'].to_numpy()[0], 1)
+            np.testing.assert_allclose(result['VACF_0_A2_ps2'].to_numpy()[0],
                                        np.mean(np.sum(general.velocities**2, axis=-1)))
 
     def test_constant_velocity_keeps_normalized_one(self):
@@ -136,20 +140,21 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             t = velocity_dump(Path(tmp) / 'dump', velocities)
             table = velocity_autocorrelation(t, ['all'], dt_ps=.001,
                                              velocity_unit='A/ps').tables['vacf']
-            np.testing.assert_allclose(table['VACF_0_A2_ps2'], [1, 1, 1, 1])
-            np.testing.assert_allclose(table['VACF_0_normalized'], [1, 1, 1, 1])
-            np.testing.assert_array_equal(table['origin_atom_pairs_0'], [8, 6, 4, 2])
+            np.testing.assert_allclose(table['VACF_0_A2_ps2'].to_numpy(), [1, 1, 1, 1])
+            np.testing.assert_allclose(table['VACF_0_normalized'].to_numpy(), [1, 1, 1, 1])
+            np.testing.assert_array_equal(table['origin_atom_pairs_0'].to_numpy(), [8, 6, 4, 2])
 
     def test_velocity_unit_conversion_factor_is_one_million(self):
         with tempfile.TemporaryDirectory() as tmp:
             t = velocity_dump(Path(tmp) / 'dump', [[[2, 0, 0]], [[-1, 0, 0]]])
             ps = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps')
             fs = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/fs')
-            np.testing.assert_allclose(fs.tables['vacf']['VACF_0_A2_ps2'],
-                                       ps.tables['vacf']['VACF_0_A2_ps2'] * 1e6)
-            np.testing.assert_allclose(fs.tables['vacf']['VACF_0_normalized'],
-                                       ps.tables['vacf']['VACF_0_normalized'])
-            np.testing.assert_allclose(fs.tables['vacf']['lag_ps'], ps.tables['vacf']['lag_ps'])
+            np.testing.assert_allclose(fs.tables['vacf']['VACF_0_A2_ps2'].to_numpy(),
+                                       ps.tables['vacf']['VACF_0_A2_ps2'].to_numpy() * 1e6)
+            np.testing.assert_allclose(fs.tables['vacf']['VACF_0_normalized'].to_numpy(),
+                                       ps.tables['vacf']['VACF_0_normalized'].to_numpy())
+            np.testing.assert_allclose(fs.tables['vacf']['lag_ps'].to_numpy(),
+                                       ps.tables['vacf']['lag_ps'].to_numpy())
             self.assertAlmostEqual(fs.summary['mean_velocity_rms_A_ps'],
                                    1000 * ps.summary['mean_velocity_rms_A_ps'])
             self.assertEqual(fs.summary['velocity_unit_input'], 'A/fs')
@@ -169,8 +174,8 @@ class VelocityAutocorrelationTests(unittest.TestCase):
                                                  velocity_unit='A/ps').tables['vacf']
             ordered = velocity_autocorrelation(sorted_t, ['all'], dt_ps=.001,
                                                velocity_unit='A/ps').tables['vacf']
-            for key in ordered:
-                np.testing.assert_allclose(reordered[key], ordered[key])
+            for key in ordered.columns:
+                np.testing.assert_allclose(reordered[key].to_numpy(), ordered[key].to_numpy())
 
     def test_parsing_rejects_missing_partial_and_nonfinite_velocities(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -217,23 +222,23 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             strided = velocity_autocorrelation(t, ['type:2'], dt_ps=.001,
                                                velocity_unit='A/ps', stride=2)
             table = strided.tables['vacf']
-            np.testing.assert_allclose(table['lag_ps'], [0, .02, .04])
+            np.testing.assert_allclose(table['lag_ps'].to_numpy(), [0, .02, .04])
             self.assertAlmostEqual(strided.summary['frame_interval_ps'], .02)
             self.assertEqual(strided.summary['selected_steps'], [0, 40])
             self.assertEqual(strided.summary['selected_frames'], 3)
             self.assertEqual(strided.summary['frame_stride'], 2)
-            np.testing.assert_array_equal(table['origin_atom_pairs_0'], [6, 4, 2])
+            np.testing.assert_array_equal(table['origin_atom_pairs_0'].to_numpy(), [6, 4, 2])
             self.assertEqual(strided.summary['vacf_selections'][0]['atoms'], 2)
             expected = explicit_vacf(t.velocities[::2][:, 2:4], 'multiple')
-            np.testing.assert_allclose(table['VACF_0_A2_ps2'], expected.sum(axis=1))
+            np.testing.assert_allclose(table['VACF_0_A2_ps2'].to_numpy(), expected.sum(axis=1))
 
             started = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
                                                start_step=20)
-            np.testing.assert_allclose(started.tables['vacf']['lag_ps'], [0, .01, .02])
+            np.testing.assert_allclose(started.tables['vacf']['lag_ps'].to_numpy(), [0, .01, .02])
             self.assertAlmostEqual(started.summary['frame_interval_ps'], .01)
             self.assertEqual(started.summary['selected_steps'], [20, 40])
             self.assertEqual(started.summary['selected_frames'], 3)
-            np.testing.assert_array_equal(started.tables['vacf']['origin_atom_pairs_0'],
+            np.testing.assert_array_equal(started.tables['vacf']['origin_atom_pairs_0'].to_numpy(),
                                           [12, 8, 4])
             with self.assertRaisesRegex(ValueError, 'start_step must not exceed stop_step'):
                 velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
@@ -246,21 +251,21 @@ class VelocityAutocorrelationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             t = velocity_dump(Path(tmp) / 'dump', velocities)
             full = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps')
-            np.testing.assert_allclose(full.tables['vacf']['lag_ps'], [0, .01, .02, .03, .04])
+            np.testing.assert_allclose(full.tables['vacf']['lag_ps'].to_numpy(), [0, .01, .02, .03, .04])
             truncated = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
                                                  max_lag_ps=.02)
-            np.testing.assert_allclose(truncated.tables['vacf']['lag_ps'], [0, .01, .02])
-            np.testing.assert_allclose(truncated.tables['vacf']['VACF_0_A2_ps2'],
-                                       full.tables['vacf']['VACF_0_A2_ps2'][:3])
-            np.testing.assert_array_equal(truncated.tables['vacf']['origin_atom_pairs_0'],
+            np.testing.assert_allclose(truncated.tables['vacf']['lag_ps'].to_numpy(), [0, .01, .02])
+            np.testing.assert_allclose(truncated.tables['vacf']['VACF_0_A2_ps2'].to_numpy(),
+                                       full.tables['vacf']['VACF_0_A2_ps2'].to_numpy()[:3])
+            np.testing.assert_array_equal(truncated.tables['vacf']['origin_atom_pairs_0'].to_numpy(),
                                           [5, 4, 3])
             below = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
                                              max_lag_ps=.019)
-            np.testing.assert_allclose(below.tables['vacf']['lag_ps'], [0, .01])
-            np.testing.assert_array_equal(below.tables['vacf']['origin_atom_pairs_0'], [5, 4])
+            np.testing.assert_allclose(below.tables['vacf']['lag_ps'].to_numpy(), [0, .01])
+            np.testing.assert_array_equal(below.tables['vacf']['origin_atom_pairs_0'].to_numpy(), [5, 4])
             exact = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
                                              max_lag_ps=.04)
-            self.assertEqual(len(exact.tables['vacf']['lag_ps']), 5)
+            self.assertEqual(len(exact.tables['vacf']['lag_ps'].to_numpy()), 5)
             with self.assertRaisesRegex(ValueError, 'available lag range'):
                 velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps',
                                          max_lag_ps=.041)
@@ -312,8 +317,8 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             result = velocity_autocorrelation(t, ['all'], dt_ps=.001, velocity_unit='A/ps')
             table = result.tables['vacf']
             self.assertAlmostEqual(result.summary['mean_velocity_rms_A_ps'], .5)
-            np.testing.assert_allclose(table['VACF_0_A2_ps2'], [.25, .25, .25])
-            np.testing.assert_allclose(table['VACF_0_normalized'], [1, 1, 1])
+            np.testing.assert_allclose(table['VACF_0_A2_ps2'].to_numpy(), [.25, .25, .25])
+            np.testing.assert_allclose(table['VACF_0_normalized'].to_numpy(), [1, 1, 1])
             self.assertFalse(result.summary['drift_removed'])
             self.assertTrue(any('drift' in note for note in result.summary['limitations']))
             self.assertTrue(any('COM' in note for note in result.summary['limitations']))
@@ -327,8 +332,10 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             t = velocity_dump(Path(tmp) / 'dump', velocities, types=[1, 2, 2])
             result = velocity_autocorrelation(t, ['type:1', 'type:2'], dt_ps=.0005,
                                               velocity_unit='A/fs')
-            lag_count = len(result.tables['vacf']['lag_ps'])
-            for name, values in result.tables['vacf'].items():
+            table = result.tables['vacf']
+            lag_count = table.height
+            for name in table.columns:
+                values = table[name].to_numpy()
                 self.assertEqual(len(values), lag_count, name)
                 self.assertTrue(np.isfinite(values).all(), name)
             self.assertEqual([item['selection'] for item in result.summary['vacf_selections']],
@@ -336,7 +343,7 @@ class VelocityAutocorrelationTests(unittest.TestCase):
             self.assertEqual([item['column'] for item in result.summary['vacf_selections']],
                              ['VACF_0_A2_ps2', 'VACF_1_A2_ps2'])
             self.assertEqual([item['atoms'] for item in result.summary['vacf_selections']], [1, 2])
-            self.assertEqual(list(result.tables['vacf'])[7:13],
+            self.assertEqual(result.tables['vacf'].columns[7:13],
                              ['VACF_1_x_A2_ps2', 'VACF_1_y_A2_ps2', 'VACF_1_z_A2_ps2',
                               'VACF_1_A2_ps2', 'VACF_1_normalized', 'origin_atom_pairs_1'])
             self.assertTrue(np.isfinite(result.summary['mean_velocity_rms_A_ps']))
