@@ -1,12 +1,13 @@
 """Feature-package contracts for the lecture's real LAMMPS output formats."""
+import dataclasses
 from pathlib import Path
 import tempfile
 import unittest
 
 import numpy as np
 
-from syutyu import (fit_diffusion, load_result, read_thermo, save_figure, save_result,
-                    summarize_thermo)
+from syutyu import (DiffusionFit, fit_diffusion, load_result, read_thermo, save_figure,
+                    save_result, summarize_thermo)
 from syutyu.io.native import read_msd, read_rdf
 
 
@@ -76,9 +77,10 @@ class PostprocessingTests(unittest.TestCase):
         msd[:5] = .1 * time[:5] ** 2
         fit = fit_diffusion(time, msd, window_ps=(10, 30))
         self.assertAlmostEqual(fit.D_m2_s, 2.43e-9, places=18)
-        self.assertAlmostEqual(fit.intercept_A2, .2)
+        self.assertAlmostEqual(fit.regression.intercept, .2)
         self.assertEqual(fit.samples, 21)
-        np.testing.assert_allclose(fit.predict([10, 30]), msd[[10, 30]])
+        np.testing.assert_allclose(fit.regression.intercept + fit.regression.slope * np.array([10, 30]),
+                                   msd[[10, 30]])
         for window in ((-1, 30), (10, 31), (20, 10), (10, 11)):
             with self.subTest(window=window), self.assertRaises(ValueError):
                 fit_diffusion(time, msd, window_ps=window)
@@ -86,6 +88,16 @@ class PostprocessingTests(unittest.TestCase):
             fit_diffusion([0, 1, 2], [2, 1, 0], window_ps=(0, 2))
         with self.assertRaises(ValueError):
             fit_diffusion([0, 1, 2], [0, np.nan, 2], window_ps=(0, 2))
+
+    def test_diffusion_fit_holds_linregress(self):
+        fit = fit_diffusion(np.arange(5.), 6 * np.arange(5.) + 1, window_ps=(0, 4))
+        self.assertAlmostEqual(fit.regression.slope, 6)
+        self.assertAlmostEqual(fit.regression.intercept, 1)
+        self.assertAlmostEqual(fit.regression.rvalue ** 2, 1)
+        self.assertAlmostEqual(fit.D_m2_s, 1e-8, places=20)
+        self.assertEqual([field.name for field in dataclasses.fields(DiffusionFit)],
+                         ['window_ps', 'samples', 'regression', 'D_m2_s', 'limitation'])
+        self.assertFalse(hasattr(fit, 'predict'))
 
     def test_separate_thermo_blocks_and_density_fluctuations(self):
         path = self.root / 'log.lammps'

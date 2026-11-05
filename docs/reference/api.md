@@ -123,7 +123,6 @@
 .. automodule:: syutyu.analysis.diffusion
 
 .. autoclass:: syutyu.DiffusionFit
-   :members: predict
 
 .. autofunction:: syutyu.fit_diffusion
 ```

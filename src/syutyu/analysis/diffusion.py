@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 import numpy as np
+from scipy import stats
 
 
 @dataclass(frozen=True)
@@ -12,31 +13,19 @@ class DiffusionFit:
     Attributes:
         window_ps (tuple[float, float]): 近似に使った経過時間の範囲（両端を含む）。ps。
         samples (int): 窓に入った点の数。
-        slope_A2_ps (float): MSD の傾き。Å²/ps。
-        intercept_A2 (float): 切片。Å²。
+        regression (object): ``scipy.stats.linregress`` が返す ``LinregressResult``。
+            ``slope`` は MSD の傾きで Å²/ps、``intercept`` は切片で Å²、``rvalue ** 2`` は決定係数。
+            ``stderr``、``intercept_stderr``、``pvalue`` は標本が独立だと仮定した値であり、
+            相関した MSD の点は独立ではない。
         D_m2_s (float): ``slope / 6 × 1e-8`` で求めた拡散係数。m²/s。
-        r_squared (float): 窓内での決定係数。線形性の目安であり、平衡や収束の証拠ではない。
         limitation (str): この見積もりで主張しないことの既定の文。
     """
     window_ps: tuple[float, float]
     samples: int
-    slope_A2_ps: float
-    intercept_A2: float
+    regression: object
     D_m2_s: float
-    r_squared: float
     limitation: str = ('A linear fit is not evidence of equilibrium or convergence; '
                        'correlated MSD samples do not give independent error bars.')
-
-    def predict(self, time_ps):
-        """近似直線の値を返す。
-
-        Args:
-            time_ps (array_like): 経過時間。ps。スカラーか配列。
-
-        Returns:
-            float | numpy.ndarray: ``slope_A2_ps * time_ps + intercept_A2``。Å²。
-        """
-        return self.slope_A2_ps * np.asarray(time_ps) + self.intercept_A2
 
 
 def fit_diffusion(time_ps, msd_A2, *, window_ps):
@@ -67,11 +56,8 @@ def fit_diffusion(time_ps, msd_A2, *, window_ps):
     selected = (time >= lower - 1e-10) & (time <= upper + 1e-10)
     if selected.sum() < 3:
         raise ValueError('Fit requires at least three samples within the window')
-    slope, intercept = np.polyfit(time[selected], msd[selected], 1)
-    if slope < 0:
+    regression = stats.linregress(time[selected], msd[selected])
+    if regression.slope < 0:
         raise ValueError('Negative fitted slope: this window cannot provide a physical diffusion estimate')
-    residual = msd[selected] - (slope * time[selected] + intercept)
-    total = np.sum((msd[selected] - msd[selected].mean()) ** 2)
-    r_squared = float(1 - np.sum(residual ** 2) / total) if total else 1.0
-    return DiffusionFit((float(lower), float(upper)), int(selected.sum()),
-                        float(slope), float(intercept), float(slope / 6 * 1e-8), r_squared)
+    return DiffusionFit((float(lower), float(upper)), int(selected.sum()), regression,
+                        float(regression.slope / 6 * 1e-8))
