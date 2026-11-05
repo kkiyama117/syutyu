@@ -12,7 +12,6 @@ uv run --locked syutyu --help
 ```python
 from syutyu import (
     Result, Trajectory, read_trajectory, read_thermo, read_thermo_blocks, save_result, load_result,
-    Site, write_charge_data,
     rdf, msd, vacf, fit_diffusion, DiffusionFit, summarize_thermo,
     run_lammps, save_figure, export_vmd,
 )
@@ -37,14 +36,21 @@ uv run --locked syutyu run inputs/system.in --asset system.data \
 
 ## LAMMPS data の書き出し
 
+data ファイルは ASE で書く。ライブラリは書き出し関数を持たない。
+
 ```python
-write_charge_data(
-    'inputs/cscl.data', (4.115, 4.115, 4.115),
-    [Site(1, 1.0, (0.0, 0.0, 0.0)), Site(2, -1.0, (0.5, 0.5, 0.5))],
-    {1: 132.90543, 2: 35.4527}, title='CsCl unit cell')
+from ase import Atoms
+from ase.io import write
+
+cell = Atoms('CsCl', scaled_positions=[(0, 0, 0), (0.5, 0.5, 0.5)],
+             cell=[4.115] * 3, pbc=True)
+cell.set_initial_charges([1.0, -1.0])
+cell.set_masses([132.90543, 35.4527])
+write('inputs/cscl.data', cell, format='lammps-data', atom_style='charge',
+      masses=True, specorder=['Cs', 'Cl'], units='real')
 ```
 
-電荷は素電荷 e、長さは Å、質量は g/mol。複製は LAMMPS の `replicate` で行う。
+電荷は素電荷 e、長さは Å、質量は g/mol。原子タイプの番号は `specorder` の順。複製は LAMMPS の `replicate` で行う。
 
 ## 自前解析とnative出力
 

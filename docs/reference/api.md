@@ -3,7 +3,7 @@
 各項目の本文は docstring から Sphinx の autodoc と napoleon が生成する。docstring は Google スタイルで書く。このページには載せる名前と順番だけを書く。
 
 - 対象は `syutyu` の公開クラスと関数。`cli.py` の内部、`_` で始まる名前は対象外。
-- `syutyu.` の直下に書いた名前は `from syutyu import ...` で使える公開API（18名）。`syutyu.io.dump.frame_indices` のように submodule を含めて書いた名前は、その submodule から import する。
+- `syutyu.` の直下に書いた名前は `from syutyu import ...` で使える公開API（16名）。`syutyu.io.dump.frame_indices` のように submodule を含めて書いた名前は、その submodule から import する。
 - 単位・計算方法・実行例は [利用ガイド](../guide/usage.md)、[解析方法](../guide/analysis-methods.md)。
 
 ## 一覧
@@ -23,8 +23,6 @@
    syutyu.io.native.read_rdf
    syutyu.io.native.read_msd
    syutyu.io.native.read_vacf
-   syutyu.Site
-   syutyu.write_charge_data
    syutyu.rdf
    syutyu.msd
    syutyu.vacf
@@ -93,16 +91,6 @@
 .. autofunction:: syutyu.io.native.read_msd
 
 .. autofunction:: syutyu.io.native.read_vacf
-```
-
-## syutyu.io.lammps_data
-
-```{eval-rst}
-.. automodule:: syutyu.io.lammps_data
-
-.. autoclass:: syutyu.Site
-
-.. autofunction:: syutyu.write_charge_data
 ```
 
 ## syutyu.analysis.dispatch

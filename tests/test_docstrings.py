@@ -54,7 +54,7 @@ def section_lines(lines, header):
 class PublicDocstringTest(unittest.TestCase):
     def test_public_objects_have_docstrings(self):
         objects, members = collect()
-        self.assertGreaterEqual(len(objects) + len(members), 36)
+        self.assertGreaterEqual(len(objects) + len(members), 34)
         for name, value in {**{key: item[2] for key, item in objects.items()}, **members}.items():
             with self.subTest(name=name):
                 self.assertTrue(documented(value).strip())
